@@ -189,3 +189,5 @@ form{display:flex;flex-direction:column;gap:14px;margin:0}
 .impPrev td,.impPrev th{white-space:nowrap;font-size:13px;padding:6px 10px}
 .logoPrev{display:flex;align-items:center;gap:14px;background:var(--sunk);border-radius:12px;padding:12px}
 .logoPrev img{height:56px;max-width:200px;object-fit:contain;background:var(--surface);border-radius:8px;padding:4px}
+
+.grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}

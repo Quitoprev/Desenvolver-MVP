@@ -4,13 +4,17 @@
 
 /* ================= utilidades ================= */
 const $ = id => document.getElementById(id);
-const TERAPIAS = ["Fonoaudiologia","Terapia ocupacional","Psicologia","ABA","Psicopedagogia","Fisioterapia","Musicoterapia","Neuropsicologia"];
+const TERAPIAS = ["Psicologia","Fonoaudiologia","Psicopedagogia","Terapia ocupacional","Musicoterapia","Fisioterapia","Nutrição"];
+const FUNCOES = ["Psicologia","Fonoaudiologia","Psicopedagogia","Terapia ocupacional","Musicoterapia","Fisioterapia","Nutricionista","Recepcionista"];
+const funcaoDe=m=>m.papel==="recepcao"?"Recepcionista":(m.especialidade||"");
+const selFuncao=(id,name,v,extra)=>`<select id="${id}" name="${name}" ${extra||""}><option value="">Escolha…</option>${FUNCOES.map(f=>`<option ${f===v?"selected":""}>${f}</option>`).join("")}</select>`;
 const STATUS = {agendada:"Agendada",confirmada:"Confirmada",presente:"Presente",falta:"Falta",desmarcada:"Desmarcada"};
 const SITUACAO = {ativo:"Ativo",fila:"Na fila",pausado:"Pausado",alta:"Alta"};
-const PAPEL = {dona:"Dona da clínica",profissional:"Profissional"};
+const PAPEL = {dona:"Dona da clínica",recepcao:"Recepção",profissional:"Profissional"};
 const FORMAS = ["Pix","Dinheiro","Cartão de débito","Cartão de crédito","Transferência"];
 const DEF = {
   confirmacao:"Olá, {responsavel}! Aqui é da {clinica}. Passando para confirmar a sessão de {paciente} em {data}, às {hora}, com {terapeuta}. Podemos confirmar? Responda SIM ou NÃO, por favor.",
+  semana:"Olá, {responsavel}! Aqui é da {clinica}. Os atendimentos de {paciente} na semana de {inicio}: {sessoes}. Pode confirmar? Responda SIM, ou nos avise se precisar remarcar.",
   fila:"Olá, {responsavel}! Aqui é da {clinica}. Abriu uma vaga em {terapia} para {paciente}. Podemos conversar sobre os horários disponíveis?",
   unimed:"Olá, {responsavel}! Aqui é da {clinica}. Lembrando que a nova guia da Unimed de {paciente} ({terapia}) precisa chegar até {dia1}, na primeira sessão de {mes}. Se ainda não levou o pedido de prorrogação à Unimed, dá tempo de fazer isso esta semana. Sem a guia nova, o atendimento fica pausado até a autorização chegar. Qualquer dúvida, é só chamar!",
   guia:"Olá, {responsavel}! Aqui é da {clinica}. Ainda não recebemos a nova guia da Unimed de {paciente} ({terapia}) para {mes}. Sem ela, o atendimento fica pausado. Consegue trazer na próxima sessão?"
@@ -19,6 +23,7 @@ const DEF = {
 function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function hoje(){return iso(new Date())}
 function parse(s){const[y,m,d]=String(s).slice(0,10).split("-").map(Number);return new Date(y,m-1,d)}
+function segunda(s){const d=parse(s);const k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);return iso(d)}
 function addDays(s,n){const d=parse(s);d.setDate(d.getDate()+n);return iso(d)}
 function diffDays(a,b){return Math.round((parse(b)-parse(a))/864e5)}
 function fmtDia(s,o){return parse(s).toLocaleDateString("pt-BR",o||{weekday:"short",day:"numeric",month:"short"}).replace(/\./g,"")}
@@ -68,14 +73,14 @@ const S={
   user:null, me:null, clinica:{}, membros:[], pac:[], vin:[], ses:[], evo:{}, pag:{}, cic:{},
   tab:lsGet("rythmos.tab")||"agenda", dia:hoje(), uniMes:ymOf(hoje()), cxMes:ymOf(hoje()),
   prof:lsGet("rythmos.prof")||"", busca:"", filtroSit:"ativo", envio:null, loaded:false, lastLoad:0,
-  fxMes:ymOf(hoje()), fxSub:"receita", notas:[], reunioes:[], rec:null,
+  fxMes:ymOf(hoje()), fxSub:"receita", notas:[], reunioes:[], rec:null, semIni:segunda(hoje()),
   extra:{} // caixa de meses fora da janela carregada
 };
 const JANELA_INI=()=>addDays(hoje(),-120);
 
 const papel=()=>S.me&&S.me.papel;
 const isDona=()=>papel()==="dona";
-const isEquipe=()=>papel()==="dona"; // só a dona vê a clínica inteira
+const isEquipe=()=>papel()==="dona"||papel()==="recepcao"; // dona e recepção veem a clínica inteira
 const isProf=()=>papel()==="profissional";
 const canCaixa=()=>isDona()||isProf();
 const meuId=()=>S.me&&S.me.user_id;
@@ -163,9 +168,10 @@ function telaOnboarding(){
   gate(`<div style="display:flex;flex-direction:column;gap:16px;align-items:center;width:100%">
   <div class="card" style="max-width:820px">${gateBrand()}<div><h2>Bem-vinda ao Rythmos</h2><p class="note">Sua conta (${esc(S.user.email)}) ainda não está em nenhuma clínica.</p></div></div>
   <div class="cards2">
-    <form class="card" id="fEntrar"><h2>Entrar na clínica</h2><p class="note">Para as profissionais da clínica. Peça o código à dona.</p>
+    <form class="card" id="fEntrar"><h2>Entrar na clínica</h2><p class="note">Para profissionais e recepção. Peça o código à dona da clínica.</p>
       <div class="f"><label for="o_cod">Código da clínica</label><input id="o_cod" name="codigo" required autocapitalize="characters" maxlength="12" style="text-transform:uppercase;letter-spacing:.15em"></div>
       <div class="f"><label for="o_nome1">Seu nome</label><input id="o_nome1" name="nome" required placeholder="Como aparece na agenda"></div>
+      <div class="f"><label for="o_func">Sua função</label>${selFuncao("o_func","funcao","","required")}</div>
       <button class="btn primary big" type="submit">Pedir acesso</button></form>
     <form class="card" id="fCriar"><h2>Cadastrar minha clínica</h2><p class="note">Para a dona ou gestora. Você controla quem entra e o que cada um vê.</p>
       <div class="f"><label for="o_cli">Nome da clínica</label><input id="o_cli" name="clinica" required></div>
@@ -174,7 +180,7 @@ function telaOnboarding(){
   </div>
   <button class="linkbtn" id="oSair">Sair desta conta</button></div>`);
   $("oSair").onclick=sair;
-  $("fEntrar").onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));try{await run(sb.rpc("entrar_clinica",{p_codigo:d.codigo,p_meu_nome:d.nome}));iniciar()}catch(err){fail(err)}};
+  $("fEntrar").onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));try{await run(sb.rpc("entrar_clinica",{p_codigo:d.codigo,p_meu_nome:d.nome,p_funcao:d.funcao||null}));iniciar()}catch(err){fail(err)}};
   $("fCriar").onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));try{await run(sb.rpc("criar_clinica",{p_nome:d.clinica,p_meu_nome:d.nome}));iniciar()}catch(err){fail(err)}};
 }
 
@@ -207,7 +213,7 @@ async function iniciar2(){
 
 /* ================= casca do app ================= */
 function tabs(){
-  const t=[["agenda","Agenda"],["pacientes","Pacientes"],["fila","Fila"],["unimed","Unimed"]];
+  const t=[["agenda","Agenda"],["confirmacoes","Confirmações"],["pacientes","Pacientes"],["fila","Fila"],["unimed","Unimed"]];
   if(canCaixa())t.push(["caixa","Caixa"],["fiscal","Fiscal"]);
   if(isDona())t.push(["reunioes","Reuniões"]);
   return t;
@@ -217,7 +223,7 @@ function render(){
   $("clinicName").textContent=S.me?(S.clinica.nome||S.me.clinica)+" · "+(isProf()?S.me.nome:PAPEL[papel()]):"";
   $("btnClinica").hidden=!isDona();
   const lg=$("clinicLogo");if(S.clinica.logo){lg.src=S.clinica.logo;lg.hidden=false}else lg.hidden=true;
-  const pend=S.loaded?{agenda:minhasPendencias().length,fila:filaLista().length,unimed:pendUnimed(),fiscal:canCaixa()?pendFiscal():0}:{};
+  const pend=S.loaded?{agenda:minhasPendencias().length,fila:filaLista().length,unimed:pendUnimed(),fiscal:canCaixa()?pendFiscal():0,confirmacoes:semanaDados(S.semIni).famSemResposta}:{};
   $("tabs").innerHTML=tabs().map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}${pend[k]?`<span class="n${k!=="fila"?" dot":""}">${pend[k]}</span>`:""}</button>`).join("");
   const fab=$("fab");
   const fl={agenda:"+ Nova sessão",pacientes:"+ Novo paciente",fila:"+ Adicionar à fila",reunioes:"+ Nova reunião"}[S.tab];
@@ -225,7 +231,7 @@ function render(){
   fab.hidden=!fl||!S.loaded;fab.textContent=fl||"";
   let h="";
   if(!S.loaded)h='<div class="empty"><span>Carregando…</span></div>';
-  else h=({agenda:vAgenda,pacientes:vPacientes,fila:vFila,unimed:vUnimed,caixa:vCaixa,fiscal:vFiscal,reunioes:vReunioes}[S.tab]||vAgenda)();
+  else h=({agenda:vAgenda,pacientes:vPacientes,fila:vFila,unimed:vUnimed,caixa:vCaixa,fiscal:vFiscal,reunioes:vReunioes,confirmacoes:vConfirmacoes}[S.tab]||vAgenda)();
   $("view").innerHTML=h;
 }
 function filtroProf(opts){
@@ -275,7 +281,7 @@ function vAgenda(){
           <div class="sub">${esc([s.terapia,mostrarProf?nomeProf(s.profissional_id):""].filter(Boolean).join(" · "))}${S.evo[s.id]?" · evolução registrada":""}</div></div>
         <span class="pill p-${s.status}">${STATUS[s.status]}</span>
         ${pode&&s.status!=="desmarcada"?`<div class="acts">
-          ${s.status==="agendada"&&link?`<a class="btn wa" href="${link}" target="_blank" rel="noopener">WhatsApp</a>`:""}
+          ${s.status==="agendada"?(link?`<a class="btn wa" href="${link}" target="_blank" rel="noopener">WhatsApp</a>`:`<button class="btn" data-act="editPac" data-id="${p.id}" title="Cadastre o WhatsApp do responsável">WhatsApp: sem número</button>`):""}
           ${s.status==="agendada"?`<button class="btn" data-act="st" data-id="${s.id}" data-v="confirmada">Confirmou</button>`:""}
           ${passou&&s.status!=="presente"&&s.status!=="falta"?`<button class="btn" data-act="st" data-id="${s.id}" data-v="presente">Presente</button><button class="btn danger" data-act="st" data-id="${s.id}" data-v="falta">Falta</button>`:""}
           ${passou&&s.status==="presente"&&podeEvolucao(s)?`<button class="btn ${S.evo[s.id]?"":"primary"}" data-act="evo" data-id="${s.id}">${S.evo[s.id]?"Ver evolução":"Escrever evolução"}</button>`:""}
@@ -296,6 +302,68 @@ function vAgenda(){
 function msgConfirmacao(s){
   const p=pacById(s.paciente_id)||{};
   return fill(modelo("confirmacao"),{responsavel:first(p.responsavel)||"tudo bem",paciente:first(p.nome),data:fmtLongo(s.data),hora:hhmm(s.hora),terapeuta:nomeProf(s.profissional_id),terapia:s.terapia||"",clinica:S.clinica.nome||""});
+}
+
+/* ================= Confirmações da semana ================= */
+function semanaDados(ini){
+  const fim=addDays(ini,6);
+  const ss=sesVisiveis().filter(s=>s.data>=ini&&s.data<=fim&&s.status!=="desmarcada").sort((x,y)=>(x.data+x.hora).localeCompare(y.data+y.hora));
+  const fam={};
+  for(const s of ss){const g=(fam[s.paciente_id]=fam[s.paciente_id]||{p:pacById(s.paciente_id)||{id:s.paciente_id,nome:"Paciente"},ses:[]});g.ses.push(s)}
+  const lista=Object.values(fam).map(g=>{const pend=g.ses.filter(s=>s.status==="agendada");g.pend=pend;g.estado=pend.length?(g.ses.length===pend.length?"sem":"parcial"):"ok";return g}).sort((x,y)=>byNome(x.p,y.p));
+  const n=k=>ss.filter(s=>s.status===k).length;
+  return{ini,fim,ss,lista,total:ss.length,conf:n("confirmada")+n("presente"),pend:n("agendada"),falta:n("falta"),famSemResposta:lista.filter(g=>g.pend.length).length};
+}
+function msgSemana(g,ini){
+  const p=g.p;
+  const lista=g.ses.map(s=>`${fmtDia(s.data,{weekday:"short",day:"2-digit",month:"2-digit"})} às ${hhmm(s.hora)} (${[s.terapia,chamar(nomeProf(s.profissional_id))].filter(Boolean).join(", ")})`).join("; ");
+  return fill(modelo("semana"),{responsavel:first(p.responsavel)||"tudo bem",paciente:first(p.nome),clinica:S.clinica.nome||"",inicio:curto(ini),sessoes:lista,terapeuta:"",terapia:"",data:"",hora:""});
+}
+function vConfirmacoes(){
+  const D=semanaDados(S.semIni),ini=S.semIni,fim=D.fim,atual=segunda(hoje());
+  const rot=ini===atual?"Esta semana":ini===addDays(atual,7)?"Próxima semana":ini<atual?"Semana passada":"Semana";
+  let h=filtroProf()+`<div class="daynav"><button class="nav" data-act="sem" data-n="-7" aria-label="Semana anterior">‹</button>
+    <div class="day"><div class="eyebrow">${rot}</div><h2>${esc(curto(ini))} a ${esc(curto(fim))}</h2></div>
+    ${ini===atual?"":'<button class="chip-today" data-act="semAtual">Esta semana</button>'}
+    <button class="nav" data-act="sem" data-n="7" aria-label="Próxima semana">›</button></div>`;
+  h+=`<div class="stats"><div class="stat"><b>${D.total}</b><span>atendimentos</span></div><div class="stat"><b>${D.conf}</b><span>confirmados</span></div><div class="stat ${D.pend?"hl":""}"><b>${D.pend}</b><span>sem resposta</span></div><div class="stat"><b>${D.lista.length}</b><span>famílias</span></div></div>`;
+  if(!D.lista.length)return h+'<div class="empty"><strong>Nenhum atendimento nesta semana</strong><span>Agende as sessões na aba Agenda; elas aparecem aqui agrupadas por família.</span></div>';
+  const semResp=D.lista.filter(g=>g.pend.length);
+  if(semResp.length)h+=`<div class="phase ${ini<=atual?"warn":"info"}"><span>${semResp.length} ${semResp.length===1?"família ainda não confirmou":"famílias ainda não confirmaram"} a semana. Envie as mensagens de uma vez e marque quem respondeu.</span><button class="btn primary" data-act="disparoSemana">Enviar para ${semResp.length} ${semResp.length===1?"família":"famílias"}</button></div>`;
+  const urg=semResp.filter(g=>g.pend.some(s=>diffDays(hoje(),s.data)<=1&&s.data>=hoje()));
+  if(urg.length){
+    h+=`<div><div class="eyebrow">Ligar agora</div><p class="note">Sessão amanhã ou hoje e ainda sem resposta.</p></div><div class="list">`;
+    for(const g of urg){const s=g.pend.find(x=>x.data>=hoje());const tel=waNum(g.p.telefone);
+      h+=`<div class="row"><div class="time">${hhmm(s.hora)}</div><div class="who" data-act="editPac" data-id="${g.p.id}"><div class="name">${esc(g.p.nome)}</div><div class="sub">${esc(fmtDia(s.data))} · ${esc(chamar(nomeProf(s.profissional_id)))}${g.p.responsavel?" · "+esc(g.p.responsavel):""}${g.p.telefone?" · "+esc(g.p.telefone):""}</div></div><span></span>
+        <div class="acts">${tel?`<a class="btn" href="tel:+${tel}">Ligar</a>`:""}<button class="btn primary" data-act="confFam" data-id="${g.p.id}">Confirmou por telefone</button><button class="btn danger" data-act="naoVem" data-id="${g.p.id}">Não vem</button></div></div>`}
+    h+="</div>";
+  }
+  h+=`<div><div class="eyebrow">Por família</div></div><div class="list">`;
+  for(const g of D.lista){
+    const link=waLink(g.p.telefone,msgSemana(g,ini));
+    const pill=g.estado==="ok"?'<span class="pill p-ok">Confirmado</span>':g.estado==="parcial"?'<span class="pill p-warn">Parcial</span>':'<span class="pill p-warn">Sem resposta</span>';
+    h+=`<div class="row"><div class="pos" style="width:auto;padding:0 8px;border-radius:8px">${g.ses.length}</div>
+      <div class="who" data-act="editPac" data-id="${g.p.id}"><div class="name">${esc(g.p.nome)}${g.p.exemplo?'<span class="ex">exemplo</span>':""}</div><div class="sub">${g.p.responsavel?esc(g.p.responsavel)+" · ":""}${g.ses.map(s=>`${fmtDia(s.data,{weekday:"short"})} ${hhmm(s.hora)}${s.status==="confirmada"||s.status==="presente"?" ✓":s.status==="falta"?" ✗":""}`).join(" · ")}</div></div>${pill}
+      <div class="acts">${link?`<a class="btn wa" href="${link}" target="_blank" rel="noopener">WhatsApp</a>`:`<button class="btn" data-act="editPac" data-id="${g.p.id}">WhatsApp: sem número</button>`}${g.pend.length?`<button class="btn" data-act="confFam" data-id="${g.p.id}">Confirmou</button><button class="btn danger" data-act="naoVem" data-id="${g.p.id}">Não vem</button>`:""}</div></div>`;
+  }
+  h+="</div>";
+  if(isEquipe()&&!S.prof){
+    const porProf={};for(const s of D.ss){(porProf[s.profissional_id||"-"]=porProf[s.profissional_id||"-"]||[]).push(s)}
+    const cols=Object.entries(porProf).map(([k,arr])=>({nome:nomeProf(k),arr})).sort(byNome);
+    if(cols.length)h+=`<div><div class="eyebrow">Por profissional</div></div><div class="grid3">${cols.map(c=>{const pend=c.arr.filter(s=>s.status==="agendada").length;return`<div class="list" style="padding:10px 12px;gap:6px"><div class="toolbar" style="justify-content:space-between"><b>${esc(c.nome)}</b><span class="pill ${pend?"p-warn":"p-ok"}">${pend?pend+" sem resposta":"tudo confirmado"}</span></div>${c.arr.map(s=>`<div style="display:flex;gap:8px;font-size:13px;align-items:center"><span class="time" style="font-size:13px;min-width:70px">${fmtDia(s.data,{weekday:"short"})} ${hhmm(s.hora)}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">${esc((pacById(s.paciente_id)||{}).nome||"")}</span><span class="pill p-${s.status}" style="font-size:11px">${STATUS[s.status]}</span></div>`).join("")}</div>`}).join("")}</div>`;
+  }
+  return h+'<p class="note">Uma mensagem por família lista todas as sessões da semana. "Confirmou" marca todas as sessões pendentes da família; para mudar uma só, use a Agenda.</p>';
+}
+function sheetDisparoSemana(ids){S.envioSem={ids,i:0,feitos:0};stepSemana()}
+function stepSemana(){
+  const q=S.envioSem,D=semanaDados(S.semIni);
+  if(q.i>=q.ids.length){openSheet(`<header><h2>Pronto</h2><button type="button" class="iconbtn" data-act="close">Fechar</button></header><p>${q.feitos} ${q.feitos===1?"mensagem enviada":"mensagens enviadas"}. Quando as famílias responderem, marque "Confirmou" na lista.</p><div class="foot"><div class="r"><button type="button" class="btn primary" data-act="close">Concluir</button></div></div>`);return}
+  const g=D.lista.find(x=>x.p.id===q.ids[q.i]);if(!g){q.i++;return stepSemana()}
+  const msg=msgSemana(g,S.semIni),link=waLink(g.p.telefone,msg);
+  openSheet(`<header><div style="min-width:0"><div class="eyebrow">Mensagem ${q.i+1} de ${q.ids.length}</div><h2>${esc(g.p.nome)}</h2></div><button type="button" class="iconbtn" data-act="close">Fechar</button></header>
+  <p class="note">Para ${esc(g.p.responsavel||"o responsável")} · ${g.p.telefone?esc(g.p.telefone):"sem WhatsApp cadastrado"}</p>
+  <div class="msgbox" id="msgtxt">${esc(msg)}</div>
+  <div class="foot"><button type="button" class="btn" data-act="semPular">Pular</button><div class="r"><button type="button" class="btn" data-act="copy">Copiar</button>${link?`<a class="btn primary" href="${link}" target="_blank" rel="noopener" data-act="semFeito">Abrir no WhatsApp</a>`:`<button type="button" class="btn" data-act="editPac" data-id="${g.p.id}">Cadastrar WhatsApp</button>`}</div></div>`);
 }
 
 /* ================= Pacientes ================= */
@@ -1066,9 +1134,9 @@ function sheetClinica(sub){
     const pend=S.membros.filter(m=>!m.ativo),ativos=S.membros.filter(m=>m.ativo).sort(byNome);
     body=`<div class="list"><div class="urow"><div><div class="eyebrow">Código para entrar na clínica</div><div class="code">${esc(S.clinica.codigo_convite||"")}</div><p class="note">Quem vai usar o Rythmos cria a conta, escolhe "Entrar na clínica" e digita este código. Depois você aprova aqui.</p></div>
       <div style="display:flex;flex-direction:column;gap:6px"><button type="button" class="btn" data-act="copyCode">Copiar</button><button type="button" class="btn" data-act="novoCodigo">Trocar código</button></div></div></div>
-    ${pend.length?`<div><div class="eyebrow" style="margin-bottom:6px">Pedidos de acesso</div><div class="list">${pend.map(m=>`<div class="urow"><div><div class="name">${esc(m.nome)}</div><div class="sub">Pediu acesso em ${esc(new Date(m.criado_em).toLocaleDateString("pt-BR"))}</div></div><span></span>
-      <div class="acts"><button type="button" class="btn primary" data-act="aprovar" data-id="${m.user_id}">Aprovar</button><button type="button" class="btn danger" data-act="recusar" data-id="${m.user_id}">Recusar</button></div></div>`).join("")}</div></div>`:""}
-    <div><div class="eyebrow" style="margin-bottom:6px">Equipe (${ativos.length})</div><div class="list">${ativos.map(m=>`<div class="urow" data-act="editMembro" data-id="${m.user_id}" style="cursor:pointer"><div><div class="name">${esc(m.nome)}${m.user_id===meuId()?'<span class="pill p-mute">você</span>':""}</div><div class="sub">${PAPEL[m.papel]}${m.especialidade?" · "+esc(m.especialidade):""}${" · repasse "+Number(m.repasse_pct)+"%"}${m.recebe==="pf"?" · recebe como PF":""}</div></div><span class="note">Editar</span></div>`).join("")}</div></div>`;
+    ${pend.length?`<div><div class="eyebrow" style="margin-bottom:6px">Pedidos de acesso</div><div class="list">${pend.map(m=>`<div class="urow"><div><div class="name">${esc(m.nome)}</div><div class="sub">${funcaoDe(m)?esc(funcaoDe(m))+" · ":""}Pediu acesso em ${esc(new Date(m.criado_em).toLocaleDateString("pt-BR"))}</div></div><span></span>
+      <div class="acts">${selFuncao("ap_"+m.user_id,"funcao",funcaoDe(m),'aria-label="Função de '+esc(m.nome)+'" style="border:1px solid var(--line);border-radius:10px;padding:7px;background:var(--bg)"')}<button type="button" class="btn primary" data-act="aprovar" data-id="${m.user_id}">Aprovar</button><button type="button" class="btn danger" data-act="recusar" data-id="${m.user_id}">Recusar</button></div></div>`).join("")}</div></div>`:""}
+    <div><div class="eyebrow" style="margin-bottom:6px">Equipe (${ativos.length})</div><div class="list">${ativos.map(m=>`<div class="urow" data-act="editMembro" data-id="${m.user_id}" style="cursor:pointer"><div><div class="name">${esc(m.nome)}${m.user_id===meuId()?'<span class="pill p-mute">você</span>':""}</div><div class="sub">${m.papel==="dona"?"Dona da clínica":esc(funcaoDe(m)||PAPEL[m.papel])}${m.papel!=="recepcao"?" · repasse "+Number(m.repasse_pct)+"%":""}${m.papel==="profissional"&&m.recebe==="pf"?" · recebe como PF":""}</div></div><span class="note">Editar</span></div>`).join("")}</div></div>`;
   }else if(clinicaSub==="mensagens"){
     const mo=S.clinica.modelos||{};
     body=`<div class="logoPrev">${S.clinica.logo?`<img src="${esc(S.clinica.logo)}" alt="Logo da clínica">`:'<span class="note">Sem logo</span>'}<div style="flex:1;min-width:0"><div class="eyebrow">Logo da clínica</div><p class="note">Aparece no topo do app ao lado do nome. PNG ou JPG; fundo transparente fica melhor.</p></div>
@@ -1076,10 +1144,11 @@ function sheetClinica(sub){
     <form id="fMsg"><div class="fields">
       <div class="f full"><label for="c_nome">Nome da clínica</label><input id="c_nome" name="nome" required value="${esc(S.clinica.nome)}"></div>
       <div class="f full"><label for="c_conf">Confirmação de sessão</label><textarea id="c_conf" name="confirmacao" style="min-height:100px">${esc(mo.confirmacao||DEF.confirmacao)}</textarea></div>
+      <div class="f full"><label for="c_sem">Confirmação da semana (uma mensagem por família)</label><textarea id="c_sem" name="semana" style="min-height:100px">${esc(mo.semana||DEF.semana)}</textarea><span class="note">Campos extras: {inicio} (segunda da semana) e {sessoes} (lista das sessões).</span></div>
       <div class="f full"><label for="c_fila">Vaga para a fila de espera</label><textarea id="c_fila" name="fila">${esc(mo.fila||DEF.fila)}</textarea></div>
       <div class="f full"><label for="c_uni">Unimed: lembrete da guia nova (perto do dia 1º)</label><textarea id="c_uni" name="unimed" style="min-height:120px">${esc(mo.unimed||DEF.unimed)}</textarea></div>
       <div class="f full"><label for="c_guia">Unimed: cobrança da guia (depois do dia 1º)</label><textarea id="c_guia" name="guia">${esc(mo.guia||DEF.guia)}</textarea></div></div>
-      <p class="note">Campos: {responsavel}, {paciente}, {data}, {hora}, {terapeuta}, {terapia}, {clinica}. Na Unimed também {prazo}, {dia1} e {mes}.</p>
+      <p class="note">Campos: {responsavel}, {paciente}, {data}, {hora}, {terapeuta}, {terapia}, {clinica}. Na semana: {inicio} e {sessoes}. Na Unimed: {prazo}, {dia1} e {mes}.</p>
       <div class="foot"><div class="r"><button class="btn primary" type="submit">Salvar</button></div></div></form>`;
   }else if(clinicaSub==="importar"){
     body=`<p class="note">Traga os pacientes que a clínica já tem. Baixe o modelo, preencha no Excel ou no Google Planilhas (uma linha por paciente e terapia) e envie aqui. Antes de gravar, você confere o que vai entrar.</p>
@@ -1120,26 +1189,25 @@ function sheetClinica(sub){
     try{await run(sb.from("clinicas").update({fiscal:fx}).eq("id",S.clinica.id));await reload(["clinica"]);toast("Dados fiscais salvos")}catch(err){fail(err)}};
   const fm=$("fMsg");
   if(fm)fm.onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
-    try{await run(sb.from("clinicas").update({nome:d.nome,modelos:{confirmacao:d.confirmacao,fila:d.fila,unimed:d.unimed,guia:d.guia}}).eq("id",S.clinica.id));await reload(["clinica"]);toast("Salvo")}catch(err){fail(err)}};
+    try{await run(sb.from("clinicas").update({nome:d.nome,modelos:{confirmacao:d.confirmacao,semana:d.semana,fila:d.fila,unimed:d.unimed,guia:d.guia}}).eq("id",S.clinica.id));await reload(["clinica"]);toast("Salvo")}catch(err){fail(err)}};
 }
 function sheetMembro(uid){
   const m=membro(uid);if(!m)return;const eu=uid===meuId();
   openSheet(`<form id="fMem"><header><h2>${esc(m.nome)}</h2><button type="button" class="iconbtn" data-act="clinSub" data-v="equipe">Voltar</button></header>
   <div class="fields">
     <div class="f full"><label for="m_nome">Nome</label><input id="m_nome" name="nome" required value="${esc(m.nome)}"></div>
-    <div class="f"><label for="m_papel">Papel</label><select id="m_papel" name="papel" ${eu?"disabled":""}>${Object.keys(PAPEL).map(k=>`<option value="${k}" ${m.papel===k?"selected":""}>${PAPEL[k]}</option>`).join("")}</select></div>
-    <div class="f"><label for="m_esp">Especialidade</label><input id="m_esp" name="especialidade" list="dlTer" value="${esc(m.especialidade||"")}"></div>
+    <div class="f"><label for="m_func">Função</label>${eu?`<input id="m_func" value="Dona da clínica" disabled>`:selFuncao("m_func","funcao",funcaoDe(m),"required")}</div>
     <div class="f"><label for="m_rep">Repasse à clínica (%)</label><input id="m_rep" name="repasse_pct" type="number" min="0" max="100" step="0.5" value="${esc(m.repasse_pct)}"></div>
     <div class="f full"><div class="eyebrow">Fiscal</div></div>
     <div class="f"><label for="m_rec">Quem recebe as sessões particulares</label><select id="m_rec" name="recebe"><option value="clinica" ${m.recebe!=="pf"?"selected":""}>A clínica (emite NFS-e)</option><option value="pf" ${m.recebe==="pf"?"selected":""}>A própria profissional (Receita Saúde)</option></select></div>
     <div class="f"><label for="m_cpf">CPF</label><input id="m_cpf" name="cpf" inputmode="numeric" value="${esc(cpfFmt(m.cpf))}"></div>
     <div class="f"><label for="m_reg">Registro no conselho</label><input id="m_reg" name="registro" placeholder="CRFa 4-12345" value="${esc(m.registro||"")}"></div>
   </div>
-  <p class="note">A dona vê tudo, inclusive o caixa e as evoluções de todas. Cada profissional vê só os próprios pacientes: as terapias, a agenda, as evoluções, a fila, a Unimed e o caixa dela.</p>
+  <p class="note">A dona vê tudo, inclusive o caixa e as evoluções de todas. A recepção vê agenda, confirmações, pacientes, fila e Unimed da clínica inteira, sem caixa, fiscal, evoluções e reuniões. Cada profissional vê só os próprios pacientes: terapias, agenda, evoluções, fila, Unimed e o caixa dela.</p>
   <div class="foot">${eu?"":`<button type="button" class="btn danger" data-act="remover" data-id="${uid}">Remover da clínica</button>`}<div class="r"><button class="btn primary" type="submit">Salvar</button></div></div>${datalists()}</form>`);
   $("fMem").onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
     const cpfD=String(d.cpf||"").replace(/\D/g,"");if(cpfD&&!cpfValido(cpfD))return toast("CPF inválido");
-    const up={nome:d.nome,especialidade:d.especialidade||null,repasse_pct:Number(d.repasse_pct||0),recebe:d.recebe,cpf:cpfD||null,registro:d.registro||null};if(!eu)up.papel=d.papel;
+    const up={nome:d.nome,repasse_pct:Number(d.repasse_pct||0),recebe:d.recebe,cpf:cpfD||null,registro:d.registro||null};if(!eu){const rec=d.funcao==="Recepcionista";up.papel=rec?"recepcao":"profissional";up.especialidade=rec?null:(d.funcao||null)}
     try{await run(sb.from("membros").update(up).eq("user_id",uid));await reload(["membros"]);toast("Equipe atualizada");sheetClinica("equipe")}catch(err){fail(err)}};
 }
 function sheetConta(){
@@ -1199,6 +1267,13 @@ async function acao(a,t){
     case"delEvo":return confirmInline(t,"Toque de novo para excluir",async()=>{try{await run(sb.from("evolucoes").delete().eq("sessao_id",id));closeSheet();toast("Evolução excluída");reload(["evo"])}catch(e){fail(e)}});
     case"disparo":{const M=S.uniMes;return sheetDisparo(cicloDe(M).filter(v=>!(cyc(v.id,M)||{}).msg_em).sort((x,y)=>(!!(cyc(y.id,M)||{}).pedido_em-!!(cyc(x.id,M)||{}).pedido_em)).map(v=>v.id))}
     case"disparoUm":return sheetDisparo([id]);
+    case"sem":S.semIni=addDays(S.semIni,Number(t.dataset.n));return render();
+    case"semAtual":S.semIni=segunda(hoje());return render();
+    case"disparoSemana":return sheetDisparoSemana(semanaDados(S.semIni).lista.filter(g=>g.pend.length).map(g=>g.p.id));
+    case"semPular":S.envioSem.i++;return stepSemana();
+    case"semFeito":S.envioSem.feitos++;setTimeout(()=>{S.envioSem.i++;stepSemana()},350);return;
+    case"confFam":{const g=semanaDados(S.semIni).lista.find(x=>x.p.id===id);if(!g)return;t.disabled=true;try{await run(sb.from("sessoes").update({status:"confirmada"}).in("id",g.pend.map(s=>s.id)));toast("Semana confirmada");closeSheet()}catch(e){fail(e)}return reload(["ses"])}
+    case"naoVem":return confirmInline(t,"Desmarcar as pendentes?",async()=>{const g=semanaDados(S.semIni).lista.find(x=>x.p.id===id);if(!g)return;try{await run(sb.from("sessoes").update({status:"desmarcada"}).in("id",g.pend.map(s=>s.id)));toast("Sessões desmarcadas; o horário fica livre para a fila")}catch(e){fail(e)}reload(["ses"])});
     case"irUnimed":S.tab="unimed";lsSet("rythmos.tab","unimed");S.uniMes=ymOf(hoje());render();window.scrollTo(0,0);return;
     case"envPular":S.envio.i++;return stepDisparo();
     case"envFeito":{const q=S.envio,vid=q.ids[q.i];q.feitos++;writeCyc(vid,S.uniMes,{msg_em:new Date().toISOString()}).catch(fail);setTimeout(()=>{q.i++;stepDisparo()},350);return}
@@ -1221,7 +1296,7 @@ async function acao(a,t){
     case"delReu":return confirmInline(t,"Excluir reunião, transcrição e ata?",async()=>{try{await run(sb.from("reunioes").delete().eq("id",id));closeSheet();toast("Reunião excluída");reload(["reunioes"])}catch(e){fail(e)}});
     case"clinSub":return sheetClinica(t.dataset.v);
     case"editMembro":return sheetMembro(id);
-    case"aprovar":{try{await run(sb.from("membros").update({ativo:true,papel:"profissional"}).eq("user_id",id));await reload(["membros"]);sheetClinica("equipe");toast("Acesso aprovado")}catch(e){fail(e)}return}
+    case"aprovar":{const f=($("ap_"+id)||{}).value||"";if(!f)return toast("Escolha a função antes de aprovar");const rec=f==="Recepcionista";try{await run(sb.from("membros").update({ativo:true,papel:rec?"recepcao":"profissional",especialidade:rec?null:f}).eq("user_id",id));await reload(["membros"]);sheetClinica("equipe");toast("Acesso aprovado")}catch(e){fail(e)}return}
     case"recusar":return confirmInline(t,"Confirmar recusa",async()=>{try{await run(sb.from("membros").delete().eq("user_id",id));await reload(["membros"]);sheetClinica("equipe");toast("Pedido recusado")}catch(e){fail(e)}});
     case"remover":return confirmInline(t,"Remover acesso desta pessoa?",async()=>{try{await run(sb.from("membros").delete().eq("user_id",id));await reload(["membros","vin"]);sheetClinica("equipe");toast("Removida da clínica")}catch(e){fail(e)}});
     case"carregarEx":t.disabled=true;try{await run(sb.rpc("carregar_exemplos"));closeSheet();toast("Exemplos carregados");await loadAll()}catch(e){t.disabled=false;fail(e)}return;

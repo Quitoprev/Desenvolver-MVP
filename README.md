@@ -4,22 +4,24 @@ App para clínicas de terapia: agenda com confirmação pelo WhatsApp, pacientes
 
 ## Quem vê o quê
 
-| | Dona da clínica | Profissional |
-|---|---|---|
-| Agenda | de todas | só a dela |
-| Pacientes | todos | só os que atende |
-| Terapias de um paciente | todas | só a dela (não vê as terapias de outras profissionais no mesmo paciente) |
-| Fila de espera | toda | só a dela |
-| Unimed | tudo | só os atendimentos dela |
-| Evoluções | todas | só as que ela escreveu |
-| Caixa | de todas, com fechamento | só o dela |
-| Fiscal (Receita Saúde, notas, contador) | tudo; só ela emite notas | só o dela; não emite notas |
-| Reuniões e atas | sim | não |
-| Equipe e mensagens | sim | não |
+Cada pessoa da equipe tem uma **função**, escolhida ao pedir acesso e confirmada pela dona na aprovação: Psicologia, Fonoaudiologia, Psicopedagogia, Terapia ocupacional, Musicoterapia, Fisioterapia, Nutricionista ou Recepcionista. A função define o que a pessoa vê.
+
+| | Dona da clínica | Recepcionista | Profissional (terapias) |
+|---|---|---|---|
+| Agenda | de todas | de todas | só a dela |
+| Confirmações (painel da semana, WhatsApp, "ligar agora") | de todas | de todas | só as dela |
+| Pacientes (ficha e contato) | todos | todos | só os que atende |
+| Terapias de um paciente | todas | todas | só a dela |
+| Fila de espera | toda | toda | só a dela |
+| Unimed | tudo | tudo | só os atendimentos dela |
+| Evoluções | todas | não vê | só as que ela escreveu |
+| Caixa e Fiscal | de todas, com fechamento | não vê | só o dela |
+| Reuniões e atas | sim | não | não |
+| Equipe, mensagens, logo, importação | sim | não | não |
 
 Essas regras ficam no banco de dados (Supabase), não só na tela. Mesmo alguém que mexa no app não consegue ver o que não pode.
 
-Uma consequência: se um paciente já existe e outra profissional vai começar a atendê-lo, quem adiciona a nova terapia na ficha é a dona. A profissional não enxerga pacientes que ainda não são dela, e cadastrar de novo criaria uma ficha duplicada.
+**A tela da recepcionista** tem cinco abas: Agenda, Confirmações, Pacientes, Fila e Unimed. Em Confirmações ela vê a semana inteira agrupada por família, manda a mensagem de confirmação pelo WhatsApp (uma por família, listando todas as sessões), marca quem confirmou ou não vem, e tem a lista "ligar agora" com quem tem sessão hoje ou amanhã e ainda não respondeu. Ela não vê evoluções, valores nem notas.
 
 ## Como colocar no ar
 
@@ -49,7 +51,7 @@ Isso faz o link de "Esqueci a senha" voltar para o app.
 ### 5. Primeiro acesso
 1. Abra o endereço da Vercel, clique em **Criar conta** e depois em **Cadastrar minha clínica**. Quem cadastra a clínica vira a dona.
 2. Para ver o app funcionando, abra **Clínica** → **Exemplos** → **Carregar exemplos**. Depois, apague os exemplos no mesmo lugar.
-3. Em **Clínica** → **Equipe** está o **código da clínica**. Cada profissional cria a própria conta, escolhe **Entrar na clínica** e digita o código. Você aprova o pedido em **Clínica** → **Equipe**.
+3. Em **Clínica** → **Equipe** está o **código da clínica**. Cada pessoa da equipe cria a própria conta, escolhe **Entrar na clínica**, digita o código e informa a função (Fonoaudiologia, Recepcionista etc.). Você aprova o pedido em **Clínica** → **Equipe**, confirmando a função.
 4. Em **Equipe**, defina a especialidade e o **repasse à clínica (%)** de cada profissional. É esse percentual que o caixa usa no fechamento.
 
 ## Parte fiscal

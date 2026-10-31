@@ -6,6 +6,8 @@
 --
 -- Papéis:
 --   dona          vê e altera tudo da clínica, inclusive caixa e equipe
+--   recepcao      vê e organiza agenda, confirmações, pacientes, fila e Unimed de
+--                 toda a clínica; não vê caixa, fiscal, evoluções nem reuniões
 --   profissional  vê só os próprios pacientes: as terapias, sessões, evoluções,
 --                 fila, Unimed e caixa dela. Não vê nada de outras profissionais,
 --                 nem quando atende o mesmo paciente.
@@ -28,7 +30,7 @@ create table if not exists public.membros (
   user_id uuid primary key references auth.users(id) on delete cascade,
   clinica_id uuid not null references public.clinicas(id) on delete cascade,
   nome text not null,
-  papel text not null default 'profissional' check (papel in ('dona','profissional')),
+  papel text not null default 'profissional' check (papel in ('dona','recepcao','profissional')),
   especialidade text,
   repasse_pct numeric(5,2) not null default 0 check (repasse_pct between 0 and 100),
   ativo boolean not null default false,
@@ -115,10 +117,9 @@ create table if not exists public.unimed_ciclos (
   primary key (vinculo_id, mes)
 );
 
--- (atualização) a recepção deixou de existir como papel
-update public.membros set papel = 'profissional' where papel not in ('dona','profissional');
+-- (atualização) papéis válidos
 alter table public.membros drop constraint if exists membros_papel_check;
-alter table public.membros add constraint membros_papel_check check (papel in ('dona','profissional'));
+alter table public.membros add constraint membros_papel_check check (papel in ('dona','recepcao','profissional'));
 
 -- ---------- parte fiscal ----------
 -- Profissional: CPF e registro no conselho (vão no recibo/nota); 'recebe' diz quem
@@ -215,6 +216,12 @@ $$;
 create or replace function public.eh_dona() returns boolean
 language sql stable security definer set search_path = public as $$
   select coalesce(public.meu_papel() = 'dona', false)
+$$;
+
+-- dona ou recepção: enxergam a clínica inteira na agenda, pacientes, fila e Unimed
+create or replace function public.eh_equipe() returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce(public.meu_papel() in ('dona','recepcao'), false)
 $$;
 
 -- a profissional atende este paciente (tem algum vínculo com ele)?
@@ -417,7 +424,6 @@ do $$ declare r record; begin
     and tablename in ('clinicas','membros','pacientes','vinculos','sessoes','evolucoes','pagamentos','unimed_ciclos','notas_fiscais','reunioes')
   loop execute format('drop policy %I on public.%I', r.policyname, r.tablename); end loop;
 end $$;
-drop function if exists public.eh_equipe();
 
 -- clínica
 create policy clinica_ver on public.clinicas for select to authenticated
@@ -435,49 +441,49 @@ create policy membros_editar on public.membros for update to authenticated
 -- a própria profissional pode completar CPF, registro e nome (papel e repasse continuam com a dona)
 create policy membros_editar_proprio on public.membros for update to authenticated
   using (user_id = auth.uid() and ativo and not public.eh_dona())
-  with check (user_id = auth.uid() and ativo and papel = 'profissional'
+  with check (user_id = auth.uid() and ativo and papel = (select papel from membros m where m.user_id = auth.uid())
     and repasse_pct = (select repasse_pct from membros m where m.user_id = auth.uid())
     and recebe = (select recebe from membros m where m.user_id = auth.uid()));
 create policy membros_remover on public.membros for delete to authenticated
   using (clinica_id = public.minha_clinica() and public.eh_dona() and user_id <> auth.uid());
 
--- pacientes: dona vê todos; profissional vê só os que atende
+-- pacientes: dona e recepção veem todos; profissional vê só os que atende
 create policy pacientes_ver on public.pacientes for select to authenticated
-  using (clinica_id = public.minha_clinica() and (public.eh_dona() or public.atende(id)));
+  using (clinica_id = public.minha_clinica() and (public.eh_equipe() or public.atende(id)));
 create policy pacientes_criar on public.pacientes for insert to authenticated
   with check (clinica_id = public.minha_clinica());
 create policy pacientes_editar on public.pacientes for update to authenticated
-  using (clinica_id = public.minha_clinica() and (public.eh_dona() or public.atende(id)))
+  using (clinica_id = public.minha_clinica() and (public.eh_equipe() or public.atende(id)))
   with check (clinica_id = public.minha_clinica());
 create policy pacientes_remover on public.pacientes for delete to authenticated
   using (clinica_id = public.minha_clinica() and public.eh_dona());
 
 -- terapias (vínculos): dona vê todas; profissional só as dela
 create policy vinculos_ver on public.vinculos for select to authenticated
-  using (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()));
+  using (clinica_id = public.minha_clinica() and (public.eh_equipe() or profissional_id = auth.uid()));
 create policy vinculos_criar on public.vinculos for insert to authenticated
   with check (clinica_id = public.minha_clinica()
     and public.paciente_da_clinica(paciente_id)
     and (profissional_id is null or public.membro_da_clinica(profissional_id))
-    and (public.eh_dona() or profissional_id = auth.uid()));
+    and (public.eh_equipe() or profissional_id = auth.uid()));
 create policy vinculos_editar on public.vinculos for update to authenticated
-  using (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()))
+  using (clinica_id = public.minha_clinica() and (public.eh_equipe() or profissional_id = auth.uid()))
   with check (clinica_id = public.minha_clinica()
     and (profissional_id is null or public.membro_da_clinica(profissional_id))
-    and (public.eh_dona() or profissional_id = auth.uid()));
+    and (public.eh_equipe() or profissional_id = auth.uid()));
 create policy vinculos_remover on public.vinculos for delete to authenticated
-  using (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()));
+  using (clinica_id = public.minha_clinica() and (public.eh_equipe() or profissional_id = auth.uid()));
 
 -- sessões: dona vê todas; profissional só as dela
 create policy sessoes_ver on public.sessoes for select to authenticated
-  using (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()));
+  using (clinica_id = public.minha_clinica() and (public.eh_equipe() or profissional_id = auth.uid()));
 create policy sessoes_criar on public.sessoes for insert to authenticated
-  with check (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()));
+  with check (clinica_id = public.minha_clinica() and (public.eh_equipe() or profissional_id = auth.uid()));
 create policy sessoes_editar on public.sessoes for update to authenticated
-  using (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()))
-  with check (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()));
+  using (clinica_id = public.minha_clinica() and (public.eh_equipe() or profissional_id = auth.uid()))
+  with check (clinica_id = public.minha_clinica() and (public.eh_equipe() or profissional_id = auth.uid()));
 create policy sessoes_remover on public.sessoes for delete to authenticated
-  using (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()));
+  using (clinica_id = public.minha_clinica() and (public.eh_equipe() or profissional_id = auth.uid()));
 
 -- evoluções: dona lê todas; profissional só as que escreveu
 create policy evolucoes_ver on public.evolucoes for select to authenticated
@@ -497,8 +503,8 @@ create policy pagamentos_tudo on public.pagamentos for all to authenticated
 
 -- Unimed: dona vê tudo; profissional só os atendimentos dela
 create policy ciclos_tudo on public.unimed_ciclos for all to authenticated
-  using (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()))
-  with check (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()));
+  using (clinica_id = public.minha_clinica() and (public.eh_equipe() or profissional_id = auth.uid()))
+  with check (clinica_id = public.minha_clinica() and (public.eh_equipe() or profissional_id = auth.uid()));
 
 -- notas fiscais: a dona cria e cancela; a profissional só vê as das sessões dela.
 -- Quem muda o status é a função no servidor (chave de serviço), nunca o app.
@@ -534,7 +540,8 @@ begin
 end $$;
 
 -- Profissional entra com o código da clínica e espera a dona aprovar.
-create or replace function public.entrar_clinica(p_codigo text, p_meu_nome text) returns text
+drop function if exists public.entrar_clinica(text, text);
+create or replace function public.entrar_clinica(p_codigo text, p_meu_nome text, p_funcao text default null) returns text
 language plpgsql security definer set search_path = public as $$
 declare c clinicas%rowtype;
 begin
@@ -545,8 +552,11 @@ begin
   select * into c from clinicas where codigo_convite = upper(trim(p_codigo));
   if c.id is null then raise exception 'Código não encontrado. Confira com a clínica.'; end if;
   if coalesce(trim(p_meu_nome), '') = '' then raise exception 'Informe o seu nome'; end if;
-  insert into membros (user_id, clinica_id, nome, papel, ativo)
-    values (auth.uid(), c.id, trim(p_meu_nome), 'profissional', false);
+  insert into membros (user_id, clinica_id, nome, papel, especialidade, ativo)
+    values (auth.uid(), c.id, trim(p_meu_nome),
+      case when lower(coalesce(p_funcao,'')) like 'recep%' then 'recepcao' else 'profissional' end,
+      case when lower(coalesce(p_funcao,'')) like 'recep%' then null else nullif(trim(p_funcao),'') end,
+      false);
   return c.nome;
 end $$;
 
@@ -635,13 +645,13 @@ end $$;
 
 -- ---------- permissões das funções ----------
 revoke all on function public.criar_clinica(text, text) from public, anon;
-revoke all on function public.entrar_clinica(text, text) from public, anon;
+revoke all on function public.entrar_clinica(text, text, text) from public, anon;
 revoke all on function public.meu_status() from public, anon;
 revoke all on function public.novo_codigo() from public, anon;
 revoke all on function public.carregar_exemplos() from public, anon;
 revoke all on function public.apagar_exemplos() from public, anon;
 grant execute on function public.criar_clinica(text, text) to authenticated;
-grant execute on function public.entrar_clinica(text, text) to authenticated;
+grant execute on function public.entrar_clinica(text, text, text) to authenticated;
 grant execute on function public.meu_status() to authenticated;
 grant execute on function public.novo_codigo() to authenticated;
 grant execute on function public.carregar_exemplos() to authenticated;
