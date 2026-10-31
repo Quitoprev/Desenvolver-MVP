@@ -92,10 +92,15 @@ Custo aproximado: transcrição em torno de US$ 0,006 por minuto de áudio (uma 
 
 **LGPD:** em reunião de clínica se fala de pacientes. O áudio e a transcrição passam pelos serviços de IA, fora do Brasil, para serem processados. A ata fica visível só para a dona, o áudio é apagado depois da transcrição e a ata usa só as iniciais, mas a transcrição guardada pode conter nomes. Oriente a equipe a citar pacientes pelas iniciais e deixe isso claro no contrato com a clínica.
 
-## Como funciona
+## Logo e importação de pacientes (Clínica)
+
+- **Logo da clínica:** em **Clínica → Mensagens**, envie um PNG ou JPG. Ele aparece no topo do app, ao lado do nome. A imagem é reduzida e guardada no banco.
+- **Importar pacientes:** em **Clínica → Importar**, baixe o modelo (.csv), preencha no Excel ou no Google Planilhas e envie o arquivo (.xlsx, .xls ou .csv). Uma linha por paciente e terapia: o mesmo paciente com fono e TO ocupa duas linhas. O app reconhece os cabeçalhos mais comuns (nome, responsável, WhatsApp, nascimento, convênio, terapia, terapeuta, situação, valor, CPF), mostra uma prévia com o que vai entrar e avisa quando não encontra a profissional pelo nome. Pacientes que já existem não são duplicados: só ganham a terapia nova.
+
+
 
 - **Paciente e terapias:** cada paciente tem uma ficha só. Cada terapia é ligada a uma profissional, com situação própria (em atendimento, fila, pausado, alta), valor da sessão e data do atendimento inicial pelo convênio. O mesmo paciente pode estar em atendimento na fono e na fila da TO.
-- **Unimed:** no atendimento inicial o responsável já traz a primeira guia. Até o dia 20 a clínica entrega o pedido de prorrogação, e no dia 1º do mês seguinte o responsável traz a guia nova. Sem a guia, o atendimento é pausado. O painel acompanha cada terapia da Unimed e envia as mensagens pelo WhatsApp, uma por vez.
+- **Unimed:** no atendimento inicial a família já traz a primeira guia. **Até o dia 20**, a equipe entrega à família o pedido de prorrogação, para ela levar à Unimed. **Até o dia 1º** do mês seguinte, a família traz a guia nova; sem ela, o atendimento é pausado. O app alerta a equipe na Agenda e na aba Unimed: a partir do dia 15, os pedidos que faltam entregar; a partir do dia 26, o lembrete da guia para mandar às famílias pelo WhatsApp; depois do dia 1º, as guias que não chegaram, com cobrança e pausa.
 - **Caixa:** entram as sessões marcadas como Presente. Nas particulares, registra-se o pagamento (pago ou em aberto, e a forma). As da Unimed entram pelo valor da terapia. A dona vê o fechamento por profissional, com o repasse.
 - **WhatsApp:** o app abre a conversa com a mensagem pronta, e alguém toca em enviar. Envio automático exige a API oficial do WhatsApp Business.
 

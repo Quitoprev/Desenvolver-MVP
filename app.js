@@ -12,7 +12,7 @@ const FORMAS = ["Pix","Dinheiro","Cartão de débito","Cartão de crédito","Tra
 const DEF = {
   confirmacao:"Olá, {responsavel}! Aqui é da {clinica}. Passando para confirmar a sessão de {paciente} em {data}, às {hora}, com {terapeuta}. Podemos confirmar? Responda SIM ou NÃO, por favor.",
   fila:"Olá, {responsavel}! Aqui é da {clinica}. Abriu uma vaga em {terapia} para {paciente}. Podemos conversar sobre os horários disponíveis?",
-  unimed:"Olá, {responsavel}! Aqui é da {clinica}. O pedido de prorrogação da Unimed de {paciente} ({terapia}) já está pronto. Por favor, leve à Unimed para autorização e traga a nova guia no dia {dia1}, na primeira sessão de {mes}. Sem a guia nova, o atendimento fica pausado até a autorização chegar. Qualquer dúvida, é só chamar!",
+  unimed:"Olá, {responsavel}! Aqui é da {clinica}. Lembrando que a nova guia da Unimed de {paciente} ({terapia}) precisa chegar até {dia1}, na primeira sessão de {mes}. Se ainda não levou o pedido de prorrogação à Unimed, dá tempo de fazer isso esta semana. Sem a guia nova, o atendimento fica pausado até a autorização chegar. Qualquer dúvida, é só chamar!",
   guia:"Olá, {responsavel}! Aqui é da {clinica}. Ainda não recebemos a nova guia da Unimed de {paciente} ({terapia}) para {mes}. Sem ela, o atendimento fica pausado. Consegue trazer na próxima sessão?"
 };
 
@@ -57,7 +57,7 @@ function errMsg(e){
 function fail(e){console.error(e);toast(errMsg(e))}
 
 /* ================= Supabase ================= */
-const CFG=window.RYTHMOS_CONFIG||{};
+const CFG=window.RYTHMOS_CONFIG||window.SESSIO_CONFIG||window.ORBITA_CONFIG||window.LUMO_CONFIG||{};
 const configurado=CFG.SUPABASE_URL&&/^https:\/\//.test(CFG.SUPABASE_URL)&&CFG.SUPABASE_ANON_KEY&&!/COLE_AQUI/.test(CFG.SUPABASE_ANON_KEY);
 const sb=configurado&&window.supabase?window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY):null;
 async function run(p){const{data,error}=await p;if(error)throw error;return data}
@@ -216,6 +216,7 @@ function render(){
   if($("app").hidden)return;
   $("clinicName").textContent=S.me?(S.clinica.nome||S.me.clinica)+" · "+(isProf()?S.me.nome:PAPEL[papel()]):"";
   $("btnClinica").hidden=!isDona();
+  const lg=$("clinicLogo");if(S.clinica.logo){lg.src=S.clinica.logo;lg.hidden=false}else lg.hidden=true;
   const pend=S.loaded?{agenda:minhasPendencias().length,fila:filaLista().length,unimed:pendUnimed(),fiscal:canCaixa()?pendFiscal():0}:{};
   $("tabs").innerHTML=tabs().map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}${pend[k]?`<span class="n${k!=="fila"?" dot":""}">${pend[k]}</span>`:""}</button>`).join("");
   const fab=$("fab");
@@ -253,6 +254,7 @@ function vAgenda(){
   const n=k=>ss.filter(s=>s.status===k).length;
   const rot=isHoje?"Hoje":d===addDays(hoje(),1)?"Amanhã":d===addDays(hoje(),-1)?"Ontem":"Agenda";
   let h=filtroProf()+daynav(rot,"dia",fmtLongo(d),isHoje,"hoje");
+  if(isHoje)h+=bannerUnimed();
   h+=`<div class="stats"><div class="stat"><b>${ss.filter(s=>s.status!=="desmarcada").length}</b><span>sessões</span></div>
     <div class="stat ${n("agendada")?"hl":""}"><b>${n("agendada")}</b><span>a confirmar</span></div>
     <div class="stat"><b>${n("confirmada")+n("presente")}</b><span>confirmadas</span></div>
@@ -367,7 +369,24 @@ function guiasPend(M){
   const ant=addMonths(M,-1);
   return S.vin.filter(v=>{const c=cyc(v.id,ant)||{};return isUniV(v)&&vinFiltro(v)&&(v.situacao==="ativo"||(v.situacao==="pausado"&&c.pausado_em))&&(!iniYm(v)||iniYm(v)<M)&&!c.guia_em});
 }
-function pendUnimed(){const t=hoje(),M=ymOf(t);return guiasPend(M).length+cicloDe(M).filter(v=>{const c=cyc(v.id,M)||{};return(!c.pedido_em&&t>=M+"-15")||(c.pedido_em&&!c.msg_em)}).length}
+const JANELA_PEDIDO=15, JANELA_LEMBRETE=26;
+function diaDe(t){return Number(t.slice(8,10))}
+function alertasUnimed(){
+  const t=hoje(),M=ymOf(t),d=diaDe(t),ciclo=cicloDe(M);
+  const pedidos=d>=JANELA_PEDIDO?ciclo.filter(v=>!(cyc(v.id,M)||{}).pedido_em):[];
+  const lembretes=d>=JANELA_LEMBRETE?ciclo.filter(v=>!(cyc(v.id,M)||{}).msg_em):[];
+  const guias=guiasPend(M);
+  return{pedidos,lembretes,guias,d,M};
+}
+function pendUnimed(){const A=alertasUnimed();return A.pedidos.length+A.lembretes.length+A.guias.length}
+function bannerUnimed(){
+  const A=alertasUnimed();if(!S.vin.some(isUniV))return"";
+  const prazo=A.M+"-20",d1=addMonths(A.M,1)+"-01",t=hoje();
+  if(A.guias.length)return`<div class="phase bad"><span><b>Unimed:</b> ${A.guias.length} ${A.guias.length===1?"família ainda não trouxe":"famílias ainda não trouxeram"} a guia nova. Cobre pelo WhatsApp ou pause o atendimento.</span><button class="btn" data-act="irUnimed">Abrir Unimed</button></div>`;
+  if(A.lembretes.length)return`<div class="phase warn"><span><b>Unimed:</b> guias novas vencem em 1º de ${nomeMes(addMonths(A.M,1))}${diffDays(t,d1)===1?" (amanhã)":` (em ${diffDays(t,d1)} dias)`}. Mande o lembrete para ${A.lembretes.length} ${A.lembretes.length===1?"família":"famílias"}.</span><button class="btn" data-act="irUnimed">Enviar lembretes</button></div>`;
+  if(A.pedidos.length)return`<div class="phase ${A.d>=18?"bad":"warn"}"><span><b>Unimed:</b> ${t>prazo?"o dia 20 passou e":"até dia 20,"} ${A.pedidos.length} ${A.pedidos.length===1?"pedido de prorrogação ainda precisa":"pedidos de prorrogação ainda precisam"} ser ${A.pedidos.length===1?"entregue":"entregues"} à família.</span><button class="btn" data-act="irUnimed">Ver pedidos</button></div>`;
+  return"";
+}
 function uniPill(v,s){
   if(!isUniV(v))return"";
   const M=ymOf(s.data),cur=ymOf(hoje());
@@ -392,14 +411,16 @@ function vUnimed(){
   const cs=ciclo.map(v=>cyc(v.id,M)||{}),N=ciclo.length;
   const nPed=cs.filter(c=>c.pedido_em).length,nMsg=cs.filter(c=>c.msg_em).length,nGuia=cs.filter(c=>c.guia_em).length;
   const semMsg=ciclo.filter(v=>!(cyc(v.id,M)||{}).msg_em);
-  const btn=semMsg.length&&M<=cur?`<button class="btn primary" data-act="disparo">Enviar mensagens (${semMsg.length})</button>`:"";
+  const btn=semMsg.length&&M<=cur?`<button class="btn primary" data-act="disparo">Enviar lembretes (${semMsg.length})</button>`:"";
   if(M===cur){
-    if(t<prazo){const n=diffDays(t,prazo);h+=`<div class="phase ${n<=5?"warn":"info"}"><span>Faltam ${n} ${n===1?"dia":"dias"} para o dia 20, prazo do pedido de prorrogação.</span>${btn}</div>`}
-    else if(t===prazo)h+=`<div class="phase warn"><span>Hoje é dia 20: entregue os pedidos de prorrogação e avise os responsáveis.</span>${btn}</div>`;
-    else{const n=diffDays(t,d1),falt=N-nPed;h+=`<div class="phase ${falt?"bad":"info"}"><span>${falt?`${falt} ${falt===1?"pedido ainda não foi entregue":"pedidos ainda não foram entregues"}. `:""}As guias novas vencem em 1º de ${nomeMes(nx)}${n===1?", amanhã":`, em ${n} dias`}.</span>${btn}</div>`}
-  }else if(M>cur)h+=`<div class="phase info"><span>Este ciclo ainda não começou. Pedidos de prorrogação até ${curto(prazo)}.</span></div>`;
+    const d=diaDe(t),falt=N-nPed,nd1=diffDays(t,d1);
+    if(d<JANELA_PEDIDO)h+=`<div class="phase info"><span><b>1ª etapa · até dia 20:</b> entregar à família o pedido de prorrogação, para ela levar à Unimed. Faltam ${diffDays(t,prazo)} dias.</span></div>`;
+    else if(t<=prazo)h+=`<div class="phase ${falt?(d>=18?"bad":"warn"):"info"}"><span><b>1ª etapa · até dia 20:</b> ${falt?`${falt} ${falt===1?"pedido ainda precisa":"pedidos ainda precisam"} ser ${falt===1?"entregue":"entregues"} à família${t===prazo?" — é hoje":` (faltam ${diffDays(t,prazo)} dias)`}.`:"todos os pedidos foram entregues."}</span></div>`;
+    else if(d<JANELA_LEMBRETE)h+=`<div class="phase ${falt?"bad":"info"}"><span>${falt?`<b>Atenção:</b> ${falt} ${falt===1?"pedido ainda não foi entregue":"pedidos ainda não foram entregues"} e o dia 20 já passou. `:"Pedidos entregues. "}A partir do dia ${JANELA_LEMBRETE}, mande o lembrete da guia nova às famílias.</span></div>`;
+    else h+=`<div class="phase ${semMsg.length?"warn":"info"}"><span><b>2ª etapa · até dia 1º:</b> a família precisa trazer a guia nova em 1º de ${nomeMes(nx)}${nd1===1?" (amanhã)":` (em ${nd1} dias)`}, senão o atendimento pausa. ${semMsg.length?`${semMsg.length} ${semMsg.length===1?"família ainda não recebeu":"famílias ainda não receberam"} o lembrete.`:"Todas as famílias já receberam o lembrete."}${falt?` ${falt} ${falt===1?"pedido continua":"pedidos continuam"} sem entrega.`:""}</span>${btn}</div>`;
+  }else if(M>cur)h+=`<div class="phase info"><span>Este ciclo ainda não começou. Pedidos de prorrogação até ${curto(prazo)}; lembrete da guia a partir do dia ${JANELA_LEMBRETE}.</span></div>`;
   h+=`<div class="cycle"><div><span class="k">Até ${curto(prazo)}</span><b>${nPed}/${N}</b><span>pedidos entregues</span></div>
-    <div><span class="k">Aviso</span><b>${nMsg}/${N}</b><span>responsáveis avisados</span></div>
+    <div><span class="k">Dia ${JANELA_LEMBRETE} a 1º</span><b>${nMsg}/${N}</b><span>lembretes da guia</span></div>
     <div><span class="k">${curto(d1)}</span><b>${nGuia}/${N}</b><span>guias de ${nomeMes(nx)}</span></div></div>`;
   const ex='<span class="ex">exemplo</span>';
   if(gp.length){
@@ -420,18 +441,18 @@ function vUnimed(){
     const p=pacById(v.paciente_id)||{},c=cyc(v.id,M)||{},ini=iniYm(v)===M,iniTarde=ini&&v.inicio_convenio>prazo;
     const und=(f,txt)=>`<button class="step done" data-act="undoUni" data-id="${v.id}" data-m="${M}" data-f="${f}" title="Toque para desfazer">${txt}</button>`;
     const ped=c.pedido_em?und("pedido_em","Pedido entregue "+curto(c.pedido_em)):(t>prazo&&M<=cur)?`<span class="step ${iniTarde?"soon":"late"}">${iniTarde?"Pedido: entregar já":"Pedido atrasado"}</span>`:`<span class="step ${M===cur&&diffDays(t,prazo)<=5?"soon":""}">Pedido até ${curto(prazo)}</span>`;
-    const msg=c.msg_em?und("msg_em","Avisado "+curto(String(c.msg_em).slice(0,10))):`<span class="step ${c.pedido_em?"soon":""}">Responsável não avisado</span>`;
+    const msg=c.msg_em?und("msg_em","Lembrete "+curto(String(c.msg_em).slice(0,10))):`<span class="step ${M===cur&&diaDe(t)>=JANELA_LEMBRETE?"soon":""}">Lembrete da guia</span>`;
     const late=!c.guia_em&&t>=d1;
     const gui=c.guia_em?und("guia_em","Guia de "+nomeMes(nx)+" "+curto(c.guia_em)):`<span class="step ${late?"late":""}">${late?"Guia de "+nomeMes(nx)+" atrasada":"Guia em "+curto(d1)}</span>`;
     h+=`<div class="urow"><div class="who" data-act="editPac" data-id="${p.id}"><div class="name">${esc(p.nome)}${p.exemplo?ex:""}${ini?'<span class="pill p-confirmada">atendimento inicial</span>':""}${v.situacao==="pausado"?'<span class="pill p-mute">pausado</span>':""}</div>
       <div class="sub">${esc([v.terapia,mostrarProf?nomeProf(v.profissional_id):"",p.responsavel].filter(Boolean).join(" · "))}</div></div><span></span>
       <div class="steps">${ped}${msg}${gui}</div>
       <div class="acts">${c.pedido_em?"":`<button class="btn ${t>=addDays(prazo,-5)&&M<=cur?"primary":""}" data-act="pedidoOk" data-id="${v.id}" data-m="${M}">Pedido entregue</button>`}
-        <button class="btn wa" data-act="disparoUm" data-id="${v.id}">${c.msg_em?"Reenviar mensagem":"Enviar mensagem"}</button>
+        <button class="btn wa" data-act="disparoUm" data-id="${v.id}">${c.msg_em?"Reenviar lembrete":"Enviar lembrete da guia"}</button>
         ${c.guia_em?"":`<button class="btn" data-act="guiaOk" data-id="${v.id}" data-m="${M}">Guia recebida</button>`}
         ${late&&v.situacao!=="pausado"?`<button class="btn danger" data-act="pausarUni" data-id="${v.id}" data-m="${M}">Pausar atendimento</button>`:""}</div></div>`;
   }
-  return h+`</div><p class="note">Regra da Unimed: no atendimento inicial o responsável já traz a primeira guia. Até o dia 20 a clínica entrega o pedido de prorrogação, e no dia 1º do mês seguinte o responsável traz a guia nova. Sem a guia, o atendimento é pausado.</p>`;
+  return h+`</div><p class="note">Regra da Unimed: no atendimento inicial a família já traz a primeira guia. <b>Até o dia 20</b>, a equipe entrega à família o pedido de prorrogação, para ela levar à Unimed. <b>Até o dia 1º</b> do mês seguinte, a família traz a guia nova; sem ela, o atendimento é pausado. O app avisa a partir do dia ${JANELA_PEDIDO} (pedidos) e do dia ${JANELA_LEMBRETE} (lembretes).</p>`;
 }
 function sheetDisparo(ids){S.envio={ids,i:0,feitos:0};stepDisparo()}
 function stepDisparo(){
@@ -439,7 +460,7 @@ function stepDisparo(){
   if(q.i>=q.ids.length){openSheet(`<header><h2>Pronto</h2><button type="button" class="iconbtn" data-act="close">Fechar</button></header><p>${q.feitos} ${q.feitos===1?"responsável marcado como avisado":"responsáveis marcados como avisados"} neste envio.</p><div class="foot"><div class="r"><button type="button" class="btn primary" data-act="close">Concluir</button></div></div>`);return}
   const v=vinById(q.ids[q.i]);if(!v){q.i++;return stepDisparo()}
   const p=pacById(v.paciente_id)||{},msg=msgUnimed(v,M),link=waLink(p.telefone,msg),many=q.ids.length>1;
-  openSheet(`<header><div style="min-width:0"><div class="eyebrow">${many?`Mensagem ${q.i+1} de ${q.ids.length}`:"Aviso de prorrogação"}</div><h2>${esc(p.nome)}</h2></div><button type="button" class="iconbtn" data-act="close">Fechar</button></header>
+  openSheet(`<header><div style="min-width:0"><div class="eyebrow">${many?`Lembrete ${q.i+1} de ${q.ids.length}`:"Lembrete da guia"}</div><h2>${esc(p.nome)}</h2></div><button type="button" class="iconbtn" data-act="close">Fechar</button></header>
   <p class="note">Para ${esc(p.responsavel||"o responsável")} · ${p.telefone?esc(p.telefone):"sem WhatsApp cadastrado"} · ${esc(v.terapia)}</p>
   <div class="msgbox" id="msgtxt">${esc(msg)}</div>
   <div class="foot">${many?'<button type="button" class="btn" data-act="envPular">Pular</button>':""}<div class="r"><button type="button" class="btn" data-act="copy">Copiar</button>${link?`<a class="btn primary" href="${link}" target="_blank" rel="noopener" data-act="envFeito">Abrir no WhatsApp</a>`:`<button type="button" class="btn primary" data-act="envFeito">Marcar como avisado</button>`}</div></div>
@@ -746,6 +767,116 @@ async function enviarAudio(id,btn){
   }catch(err){fail(err);await reload(["reunioes"]);sheetReuDetalhe(id)}
 }
 
+/* ================= logo e importação (dona) ================= */
+async function trocarLogo(file){
+  if(!file)return;
+  if(!/^image\//.test(file.type))return toast("Escolha um arquivo de imagem (PNG ou JPG).");
+  try{
+    const img=await new Promise((ok,err)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=err;i.src=URL.createObjectURL(file)});
+    const max=320,k=Math.min(1,max/Math.max(img.width,img.height));
+    const cv=document.createElement("canvas");cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);
+    cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
+    let data=cv.toDataURL("image/png");
+    if(data.length>180000)data=cv.toDataURL("image/jpeg",0.85);
+    if(data.length>250000)return toast("Imagem muito detalhada. Use uma versão menor do logo.");
+    await run(sb.from("clinicas").update({logo:data}).eq("id",S.clinica.id));
+    await reload(["clinica"]);toast("Logo atualizado");sheetClinica("mensagens");
+  }catch(e){fail(e)}
+}
+const IMP_COLS={nome:["nome","paciente","nome do paciente","criança","crianca"],responsavel:["responsavel","responsável","mae","mãe","pai","tutor","tutora","responsável financeiro"],telefone:["telefone","whatsapp","celular","fone","contato"],nascimento:["nascimento","data de nascimento","dn","nasc"],convenio:["convenio","convênio","plano","plano de saude","plano de saúde"],terapia:["terapia","especialidade","area","área","servico","serviço"],profissional:["profissional","terapeuta","atendente"],situacao:["situacao","situação","status"],valor_sessao:["valor_sessao","valor","valor da sessao","valor da sessão","preco","preço"],cpf_pagador:["cpf_pagador","cpf","cpf do pagador","cpf responsavel","cpf do responsável"],observacoes:["observacoes","observações","obs","notas"]};
+function parseCsv(txt){
+  txt=txt.replace(/^\ufeff/,"");
+  const sep=(txt.split("\n")[0].match(/;/g)||[]).length>=(txt.split("\n")[0].match(/,/g)||[]).length?";":",";
+  const rows=[];let row=[],cell="",q=false;
+  for(let i=0;i<txt.length;i++){const c=txt[i];
+    if(q){if(c==='"'){if(txt[i+1]==='"'){cell+='"';i++}else q=false}else cell+=c}
+    else if(c==='"')q=true;
+    else if(c===sep){row.push(cell);cell=""}
+    else if(c==="\n"||c==="\r"){if(c==="\r"&&txt[i+1]==="\n")i++;row.push(cell);rows.push(row);row=[];cell=""}
+    else cell+=c}
+  if(cell||row.length){row.push(cell);rows.push(row)}
+  return rows;
+}
+function normStr(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim()}
+function mapaColunas(headers){const m={};headers.forEach((h,i)=>{const n=normStr(h);for(const k in IMP_COLS)if(IMP_COLS[k].some(x=>normStr(x)===n)&&m[k]==null)m[k]=i});return m}
+function dataBr(v){
+  if(v==null||v==="")return null;
+  if(v instanceof Date&&!isNaN(v))return iso(v);
+  const s=String(v).trim();let m;
+  if((m=s.match(/^(\d{4})-(\d{2})-(\d{2})/)))return `${m[1]}-${m[2]}-${m[3]}`;
+  if((m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/))){let y=m[3].length===2?"20"+m[3]:m[3];return `${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`}
+  if(/^\d+(\.\d+)?$/.test(s)){const d=new Date(Date.UTC(1899,11,30)+Number(s)*864e5);return iso(new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()))}
+  return null;
+}
+function profPorNome(n){const q=normStr(n);if(!q)return null;const l=atendentes();return l.find(m=>normStr(m.nome)===q)||l.find(m=>normStr(chamar(m.nome))===normStr(chamar(n)))||l.find(m=>normStr(m.nome).includes(q)||q.includes(normStr(chamar(m.nome))))||null}
+async function lerPlanilha(file){
+  const box=$("impBox");if(!file||!box)return;
+  box.innerHTML='<p class="note">Lendo a planilha…</p>';
+  try{
+    let rows;
+    if(/\.csv$/i.test(file.name)||/csv|text\/plain/.test(file.type)){rows=parseCsv(await file.text())}
+    else{
+      if(!window.XLSX)throw new Error("O leitor de Excel ainda não carregou. Tente de novo em instantes, ou salve a planilha como CSV.");
+      const wb=XLSX.read(await file.arrayBuffer(),{type:"array",cellDates:true});
+      rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:"",raw:true});
+    }
+    const hi=rows.findIndex(r=>r.some(c=>String(c).trim()));if(hi<0)throw new Error("Planilha vazia.");
+    const headers=rows[hi].map(String),map=mapaColunas(headers);
+    if(map.nome==null)throw new Error("Não achei a coluna \"nome\". Use o modelo ou renomeie o cabeçalho.");
+    const get=(r,k)=>map[k]==null?"":String(r[map[k]]??"").trim();
+    const itens=[];const avisos=[];
+    for(const r of rows.slice(hi+1)){
+      const nome=get(r,"nome");if(!nome)continue;
+      const profNome=get(r,"profissional"),prof=profNome?profPorNome(profNome):null;
+      const sitRaw=normStr(get(r,"situacao")),sit=/fila|espera/.test(sitRaw)?"fila":/paus/.test(sitRaw)?"pausado":/alta|encerr/.test(sitRaw)?"alta":"ativo";
+      const convRaw=get(r,"convenio"),conv=/unimed/i.test(convRaw)?"Unimed":!convRaw||/partic|^-?$|nao|não|nenhum/i.test(convRaw)?"Particular":"Outro";
+      const valor=get(r,"valor_sessao").replace(/[R$\s.]/g,"").replace(",",".");
+      const cpf=get(r,"cpf_pagador").replace(/\D/g,"");
+      if(profNome&&!prof)avisos.push(`${nome}: profissional "${profNome}" não encontrada na equipe; ficará sem profissional.`);
+      if(cpf&&!cpfValido(cpf))avisos.push(`${nome}: CPF do pagador inválido; ficará em branco.`);
+      itens.push({nome,responsavel:get(r,"responsavel")||null,telefone:get(r,"telefone")||null,nascimento:dataBr(r[map.nascimento]),convenio:conv,observacoes:get(r,"observacoes")||null,cpf_pagador:cpf&&cpfValido(cpf)?cpf:null,
+        terapia:get(r,"terapia")||(prof&&prof.especialidade)||"Terapia",profissional_id:prof?prof.user_id:null,profNome:prof?prof.nome:profNome,situacao:sit,valor_sessao:valor&&!isNaN(Number(valor))?Number(valor):null});
+    }
+    if(!itens.length)throw new Error("Nenhuma linha com nome preenchido.");
+    // agrupa por paciente (nome + responsável), detecta já existentes
+    const grupos={};for(const it of itens){const k=normStr(it.nome)+"|"+normStr(it.responsavel);(grupos[k]=grupos[k]||{pac:it,vins:[]}).vins.push(it)}
+    const lista=Object.values(grupos);
+    const existe=g=>S.pac.find(p=>normStr(p.nome)===normStr(g.pac.nome)&&(!g.pac.responsavel||!p.responsavel||normStr(p.responsavel)===normStr(g.pac.responsavel)));
+    lista.forEach(g=>g.ex=existe(g));
+    const novos=lista.filter(g=>!g.ex),dup=lista.filter(g=>g.ex);
+    S.imp={lista,novos};
+    box.innerHTML=`<div class="stats three"><div class="stat"><b>${novos.length}</b><span>pacientes novos</span></div><div class="stat"><b>${itens.length}</b><span>terapias (linhas)</span></div><div class="stat ${dup.length?"hl":""}"><b>${dup.length}</b><span>já cadastrados (vão ganhar só a terapia)</span></div></div>
+      ${avisos.length?`<div class="banner">${avisos.slice(0,6).map(esc).join("<br>")}${avisos.length>6?`<br>… e mais ${avisos.length-6}`:""}</div>`:""}
+      <div class="tablewrap impPrev"><table><thead><tr><th>Paciente</th><th>Responsável</th><th>WhatsApp</th><th>Convênio</th><th>Terapia</th><th>Profissional</th><th>Situação</th></tr></thead><tbody>${itens.slice(0,200).map(it=>`<tr><td>${esc(it.nome)}</td><td>${esc(it.responsavel||"")}</td><td>${esc(it.telefone||"")}</td><td>${it.convenio}</td><td>${esc(it.terapia)}</td><td>${esc(it.profNome||"—")}</td><td>${SITUACAO[it.situacao]}</td></tr>`).join("")}</tbody></table></div>
+      <div class="foot"><div class="r"><button type="button" class="btn primary" data-act="importar">Importar ${itens.length} ${itens.length===1?"linha":"linhas"}</button></div></div>`;
+  }catch(e){box.innerHTML=`<p class="err">${esc(errMsg(e))}</p>`}
+}
+async function importar(btn){
+  const I=S.imp;if(!I)return;btn.disabled=true;btn.textContent="Importando…";
+  let nPac=0,nVin=0;
+  try{
+    for(const g of I.lista){
+      let pid=g.ex?g.ex.id:null;
+      if(!pid){pid=uuid();const p=g.pac;await run(sb.from("pacientes").insert({id:pid,nome:p.nome,responsavel:p.responsavel,telefone:p.telefone,nascimento:p.nascimento,convenio:p.convenio,observacoes:p.observacoes,cpf_pagador:p.cpf_pagador}));nPac++}
+      const vinsEx=S.vin.filter(v=>v.paciente_id===pid);
+      const rows=g.vins.filter(v=>!vinsEx.some(x=>normStr(x.terapia)===normStr(v.terapia)&&(x.profissional_id||null)===(v.profissional_id||null)))
+        .map(v=>({paciente_id:pid,profissional_id:v.profissional_id,terapia:v.terapia,situacao:v.situacao,valor_sessao:v.valor_sessao,entrada_fila:v.situacao==="fila"?hoje():null}));
+      if(rows.length){await run(sb.from("vinculos").insert(rows));nVin+=rows.length}
+    }
+    S.imp=null;closeSheet();toast(`${nPac} ${nPac===1?"paciente":"pacientes"} e ${nVin} ${nVin===1?"terapia":"terapias"} importados`);
+    await reload(["pac","vin"]);
+  }catch(e){fail(e);btn.disabled=false;btn.textContent="Tentar de novo";await reload(["pac","vin"])}
+}
+function modeloCsv(){
+  const linhas=[["nome","responsavel","telefone","nascimento","convenio","terapia","profissional","situacao","valor_sessao","cpf_pagador","observacoes"],
+    ["Theo Albuquerque","Camila Albuquerque","82999990000","12/03/2019","Unimed","Fonoaudiologia","Dra. Lívia","ativo","","",""],
+    ["Theo Albuquerque","Camila Albuquerque","82999990000","12/03/2019","Unimed","Terapia ocupacional","Rafael","ativo","","",""],
+    ["Alice Menezes","Patrícia Menezes","82988880000","05/07/2020","Particular","Fonoaudiologia","Dra. Lívia","ativo","180","000.000.001-91",""],
+    ["Davi Lins","Renata Lins","82977770000","","Particular","Psicologia","","fila","","","Encaminhado pela escola"]];
+  const csv="\ufeff"+linhas.map(r=>r.map(v=>/[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v).join(";")).join("\r\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="modelo-pacientes.csv";document.body.appendChild(a);a.click();a.remove();
+}
+
 /* ================= folhas (formulários) ================= */
 function openSheet(html){$("scrim").hidden=false;$("sheet").innerHTML=html;$("sheet").scrollTop=0;const f=$("sheet").querySelector("input:not([type=hidden]),select,textarea");if(f&&matchMedia("(min-width:640px)").matches)f.focus()}
 function closeSheet(){if(S.rec){S.rec.stop();S.rec=null}$("scrim").hidden=true;$("sheet").innerHTML=""}
@@ -940,14 +1071,21 @@ function sheetClinica(sub){
     <div><div class="eyebrow" style="margin-bottom:6px">Equipe (${ativos.length})</div><div class="list">${ativos.map(m=>`<div class="urow" data-act="editMembro" data-id="${m.user_id}" style="cursor:pointer"><div><div class="name">${esc(m.nome)}${m.user_id===meuId()?'<span class="pill p-mute">você</span>':""}</div><div class="sub">${PAPEL[m.papel]}${m.especialidade?" · "+esc(m.especialidade):""}${" · repasse "+Number(m.repasse_pct)+"%"}${m.recebe==="pf"?" · recebe como PF":""}</div></div><span class="note">Editar</span></div>`).join("")}</div></div>`;
   }else if(clinicaSub==="mensagens"){
     const mo=S.clinica.modelos||{};
-    body=`<form id="fMsg"><div class="fields">
+    body=`<div class="logoPrev">${S.clinica.logo?`<img src="${esc(S.clinica.logo)}" alt="Logo da clínica">`:'<span class="note">Sem logo</span>'}<div style="flex:1;min-width:0"><div class="eyebrow">Logo da clínica</div><p class="note">Aparece no topo do app ao lado do nome. PNG ou JPG; fundo transparente fica melhor.</p></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><label class="btn" for="logoFile" style="cursor:pointer">Enviar logo</label><input type="file" id="logoFile" accept="image/*" hidden>${S.clinica.logo?'<button type="button" class="btn danger" data-act="removerLogo">Remover</button>':""}</div></div>
+    <form id="fMsg"><div class="fields">
       <div class="f full"><label for="c_nome">Nome da clínica</label><input id="c_nome" name="nome" required value="${esc(S.clinica.nome)}"></div>
       <div class="f full"><label for="c_conf">Confirmação de sessão</label><textarea id="c_conf" name="confirmacao" style="min-height:100px">${esc(mo.confirmacao||DEF.confirmacao)}</textarea></div>
       <div class="f full"><label for="c_fila">Vaga para a fila de espera</label><textarea id="c_fila" name="fila">${esc(mo.fila||DEF.fila)}</textarea></div>
-      <div class="f full"><label for="c_uni">Unimed: aviso de prorrogação</label><textarea id="c_uni" name="unimed" style="min-height:120px">${esc(mo.unimed||DEF.unimed)}</textarea></div>
-      <div class="f full"><label for="c_guia">Unimed: cobrança da guia</label><textarea id="c_guia" name="guia">${esc(mo.guia||DEF.guia)}</textarea></div></div>
+      <div class="f full"><label for="c_uni">Unimed: lembrete da guia nova (perto do dia 1º)</label><textarea id="c_uni" name="unimed" style="min-height:120px">${esc(mo.unimed||DEF.unimed)}</textarea></div>
+      <div class="f full"><label for="c_guia">Unimed: cobrança da guia (depois do dia 1º)</label><textarea id="c_guia" name="guia">${esc(mo.guia||DEF.guia)}</textarea></div></div>
       <p class="note">Campos: {responsavel}, {paciente}, {data}, {hora}, {terapeuta}, {terapia}, {clinica}. Na Unimed também {prazo}, {dia1} e {mes}.</p>
       <div class="foot"><div class="r"><button class="btn primary" type="submit">Salvar</button></div></div></form>`;
+  }else if(clinicaSub==="importar"){
+    body=`<p class="note">Traga os pacientes que a clínica já tem. Baixe o modelo, preencha no Excel ou no Google Planilhas (uma linha por paciente e terapia) e envie aqui. Antes de gravar, você confere o que vai entrar.</p>
+      <div class="toolbar"><button type="button" class="btn" data-act="modeloCsv">Baixar modelo (.csv)</button><span class="note">Colunas: nome, responsavel, telefone, nascimento, convenio, terapia, profissional, situacao, valor_sessao, cpf_pagador, observacoes</span></div>
+      <div class="f"><label for="impFile">Planilha preenchida (.xlsx, .xls ou .csv)</label><input type="file" id="impFile" accept=".xlsx,.xls,.csv,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="font-size:13px"></div>
+      <div id="impBox"></div>`;
   }else if(clinicaSub==="fiscal"){
     const fx=S.clinica.fiscal||{};
     const sel=(n,opts,v)=>`<select id="x_${n}" name="${n}">${opts.map(([k,l])=>`<option value="${k}" ${String(v??"")===k?"selected":""}>${l}</option>`).join("")}</select>`;
@@ -972,7 +1110,9 @@ function sheetClinica(sub){
       <div class="toolbar" style="justify-content:center"><button type="button" class="btn primary" data-act="carregarEx">Carregar exemplos</button>${temEx?'<button type="button" class="btn danger" data-act="apagarEx">Apagar exemplos</button>':""}</div></div>`;
   }
   openSheet(`<header><h2>${esc(S.clinica.nome||"Clínica")}</h2><button type="button" class="iconbtn" data-act="close">Fechar</button></header>
-  <div class="subtabs"><button type="button" data-act="clinSub" data-v="equipe" ${st("equipe")}>Equipe</button><button type="button" data-act="clinSub" data-v="mensagens" ${st("mensagens")}>Mensagens</button><button type="button" data-act="clinSub" data-v="fiscal" ${st("fiscal")}>Fiscal</button><button type="button" data-act="clinSub" data-v="exemplos" ${st("exemplos")}>Exemplos</button></div>${body}`);
+  <div class="subtabs"><button type="button" data-act="clinSub" data-v="equipe" ${st("equipe")}>Equipe</button><button type="button" data-act="clinSub" data-v="mensagens" ${st("mensagens")}>Mensagens</button><button type="button" data-act="clinSub" data-v="fiscal" ${st("fiscal")}>Fiscal</button><button type="button" data-act="clinSub" data-v="importar" ${st("importar")}>Importar</button><button type="button" data-act="clinSub" data-v="exemplos" ${st("exemplos")}>Exemplos</button></div>${body}`);
+  const fl=$("logoFile");if(fl)fl.onchange=()=>trocarLogo(fl.files[0]);
+  const fi=$("impFile");if(fi)fi.onchange=()=>lerPlanilha(fi.files[0]);
   const ff=$("fFiscal");
   if(ff)ff.onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
     const fx={cnpj:String(d.cnpj).replace(/\D/g,""),inscricao_municipal:d.inscricao_municipal.trim(),codigo_municipio:d.codigo_municipio.trim(),optante_simples_nacional:d.optante_simples_nacional==="true",item_lista_servico:d.item_lista_servico.trim()||null,codigo_tributario_municipio:d.codigo_tributario_municipio.trim()||null,aliquota:d.aliquota?Number(d.aliquota):null,codigo_cnae:d.codigo_cnae.trim()||null,regime_especial_tributacao:d.regime_especial_tributacao||null,ambiente:d.ambiente,discriminacao:d.discriminacao.trim()||null};
@@ -1059,6 +1199,7 @@ async function acao(a,t){
     case"delEvo":return confirmInline(t,"Toque de novo para excluir",async()=>{try{await run(sb.from("evolucoes").delete().eq("sessao_id",id));closeSheet();toast("Evolução excluída");reload(["evo"])}catch(e){fail(e)}});
     case"disparo":{const M=S.uniMes;return sheetDisparo(cicloDe(M).filter(v=>!(cyc(v.id,M)||{}).msg_em).sort((x,y)=>(!!(cyc(y.id,M)||{}).pedido_em-!!(cyc(x.id,M)||{}).pedido_em)).map(v=>v.id))}
     case"disparoUm":return sheetDisparo([id]);
+    case"irUnimed":S.tab="unimed";lsSet("rythmos.tab","unimed");S.uniMes=ymOf(hoje());render();window.scrollTo(0,0);return;
     case"envPular":S.envio.i++;return stepDisparo();
     case"envFeito":{const q=S.envio,vid=q.ids[q.i];q.feitos++;writeCyc(vid,S.uniMes,{msg_em:new Date().toISOString()}).catch(fail);setTimeout(()=>{q.i++;stepDisparo()},350);return}
     case"pedidoOk":try{await writeCyc(id,t.dataset.m,{pedido_em:hoje()});toast("Pedido de prorrogação registrado")}catch(e){fail(e)}return reload(["cic"]);
@@ -1066,6 +1207,9 @@ async function acao(a,t){
     case"pausarUni":return confirmInline(t,"Toque de novo para pausar",async()=>{try{await run(sb.from("vinculos").update({situacao:"pausado"}).eq("id",id));await writeCyc(id,t.dataset.m,{pausado_em:hoje()});toast("Atendimento pausado até a guia chegar")}catch(e){fail(e)}reload(["cic","vin"])});
     case"undoUni":return confirmInline(t,"Desfazer?",async()=>{try{await writeCyc(id,t.dataset.m,{[t.dataset.f]:null});toast("Desfeito")}catch(e){fail(e)}reload(["cic"])});
     case"abrirClinica":return sheetClinica(t.dataset.sub);
+    case"removerLogo":try{await run(sb.from("clinicas").update({logo:null}).eq("id",S.clinica.id));await reload(["clinica"]);sheetClinica("mensagens");toast("Logo removido")}catch(e){fail(e)}return;
+    case"modeloCsv":return modeloCsv();
+    case"importar":return importar(t);
     case"abrirReu":return sheetReuDetalhe(id);
     case"editReu":return sheetReuniao(S.reunioes.find(x=>x.id===id));
     case"gravar":return gravarAoVivo(id);

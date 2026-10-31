@@ -135,6 +135,8 @@ alter table public.pacientes add column if not exists nome_pagador text;
 alter table public.pacientes add column if not exists email_pagador text;
 -- Clínica: dados do prestador para a NFS-e (o token do emissor NÃO fica aqui)
 alter table public.clinicas add column if not exists fiscal jsonb not null default '{}'::jsonb;
+-- Logo da clínica (imagem pequena, guardada como data URL)
+alter table public.clinicas add column if not exists logo text;
 -- Pagamento: controle do recibo/nota
 alter table public.pagamentos add column if not exists receita_saude_em date;
 alter table public.pagamentos add column if not exists nota_id uuid;
