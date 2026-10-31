@@ -216,6 +216,7 @@ function tabs(){
   const t=[["agenda","Agenda"],["confirmacoes","Confirmações"],["pacientes","Pacientes"],["fila","Fila"],["unimed","Unimed"]];
   if(canCaixa())t.push(["caixa","Caixa"],["fiscal","Fiscal"]);
   if(isDona())t.push(["reunioes","Reuniões"]);
+  if(canCaixa())t.push(["jogos","Jogos"]);
   return t;
 }
 function render(){
@@ -231,7 +232,7 @@ function render(){
   fab.hidden=!fl||!S.loaded;fab.textContent=fl||"";
   let h="";
   if(!S.loaded)h='<div class="empty"><span>Carregando…</span></div>';
-  else h=({agenda:vAgenda,pacientes:vPacientes,fila:vFila,unimed:vUnimed,caixa:vCaixa,fiscal:vFiscal,reunioes:vReunioes,confirmacoes:vConfirmacoes}[S.tab]||vAgenda)();
+  else h=({agenda:vAgenda,pacientes:vPacientes,fila:vFila,unimed:vUnimed,caixa:vCaixa,fiscal:vFiscal,reunioes:vReunioes,confirmacoes:vConfirmacoes,jogos:vJogos}[S.tab]||vAgenda)();
   $("view").innerHTML=h;
 }
 function filtroProf(opts){
@@ -1310,6 +1311,7 @@ document.addEventListener("click",e=>{
   const tab=e.target.closest(".tab");
   if(tab){S.tab=tab.dataset.tab;lsSet("rythmos.tab",S.tab);render();window.scrollTo(0,0);return}
   const t=e.target.closest("[data-act]");if(!t)return;
+  if(t.dataset.act.startsWith("jg")&&typeof jgAcao==="function"&&jgAcao(t.dataset.act,t))return;
   acao(t.dataset.act,t);
 });
 document.addEventListener("change",e=>{

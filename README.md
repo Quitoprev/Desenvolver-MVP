@@ -106,9 +106,28 @@ Custo aproximado: transcrição em torno de US$ 0,006 por minuto de áudio (uma 
 - **Caixa:** entram as sessões marcadas como Presente. Nas particulares, registra-se o pagamento (pago ou em aberto, e a forma). As da Unimed entram pelo valor da terapia. A dona vê o fechamento por profissional, com o repasse.
 - **WhatsApp:** o app abre a conversa com a mensagem pronta, e alguém toca em enviar. Envio automático exige a API oficial do WhatsApp Business.
 
+## Jogos para a sessão
+
+A aba **Jogos** (dona e profissionais) tem dez atividades para usar no tablet com a criança, sem cronômetro, sem pontuação negativa e sem efeitos que piscam. Som desligado por padrão; "Falar as palavras" liga a voz em português.
+
+| Jogo | Trabalha | O que a criança faz |
+|---|---|---|
+| Pares | memória, atenção | vira cartas e acha as duplas |
+| Qual é? | compreensão de palavras, vocabulário | ouve a palavra e toca na figura |
+| Emoções | reconhecer expressões | toca no rosto que mostra a emoção pedida |
+| Minha vez, sua vez | troca de turnos, sequência | repete a ordem das cores |
+| Primeiro, depois | rotina visual, sequência temporal | coloca os passos da manhã e da noite na ordem |
+| Separar | classificar, categorias | leva cada figura para a cesta certa (comida, animais, brinquedos…) |
+| Ache! | atenção visual, rastreio | encontra todas as figuras iguais no quadro |
+| O que vem depois? | padrões, lógica | completa a sequência de formas |
+| Eu quero | comunicação de necessidades | toca no que precisa e o tablet fala por ela (água, pausa, ajuda, banheiro…) |
+| Respirar | autorregulação | acompanha cinco respirações guiadas |
+
+No fim da rodada, "Registrar na evolução" anota acertos, tentativas e tempo (ou os pedidos feitos, no "Eu quero") na evolução da sessão de hoje da criança escolhida. "Tela cheia" esconde o resto do app.
+
 ## Arquivos
 
-- `index.html`, `styles.css`, `app.js`: o app. Roda direto no navegador, sem etapa de build.
+- `index.html`, `styles.css`, `app.js`, `jogos.js`: o app. Roda direto no navegador, sem etapa de build.
 - `config.js`: endereço e chave pública do Supabase.
 - `supabase/schema.sql`: tabelas, regras de acesso e funções. Pode ser rodado de novo para atualizar, sem perder dados.
 - `supabase/functions/nfse/index.ts`: função que emite, consulta e cancela a NFS-e (roda no Supabase).
