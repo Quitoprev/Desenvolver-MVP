@@ -6,6 +6,12 @@
 <title>Rythmos</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><rect width='120' height='120' rx='28' fill='%2312233D'/><g transform='translate(14 24) scale(1.55)'><path d='M5 29 C12 29 13 20 20 20 C27 20 28 27 35 25 C41 23 42 14 46 12' fill='none' stroke='white' stroke-width='5' stroke-linecap='round'/><circle cx='53' cy='10' r='6' fill='%235CC8A8'/></g></svg>">
 <meta name="theme-color" content="#12233D">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Rythmos">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
@@ -40,5 +46,22 @@
 <script src="app.js"></script>
 <script src="jogos.js"></script>
 <script src="prontuario.js"></script>
+<script>
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+// aviso de instalação: Android/Chrome mostra o botão; iPhone recebe a dica do Safari
+(function(){
+  const jaApp=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  let ok=false;try{ok=!localStorage.getItem("rythmos.instalar.nao")}catch(e){}
+  if(jaApp||!ok)return;
+  const iOS=/iPhone|iPad|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  const box=document.createElement("div");box.className="instalar";box.hidden=true;
+  const mostrar=(msg,btn)=>{box.innerHTML=`<span>${msg}</span><span class="r">${btn?'<button type="button" class="btn primary" id="instOk">Instalar</button>':""}<button type="button" class="btn" id="instNao">Agora não</button></span>`;document.body.appendChild(box);box.hidden=false;
+    document.getElementById("instNao").onclick=()=>{box.remove();try{localStorage.setItem("rythmos.instalar.nao","1")}catch(e){}}};
+  let evt=null;
+  window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();evt=e;mostrar("Instale o Rythmos como app no celular: abre em tela cheia, com ícone na tela inicial.",true);
+    document.getElementById("instOk").onclick=async()=>{box.remove();if(evt){evt.prompt();await evt.userChoice;evt=null}}});
+  if(iOS)setTimeout(()=>mostrar("Para ter o Rythmos como app no iPhone: toque em Compartilhar (quadrado com seta) e depois em “Adicionar à Tela de Início”.",false),2500);
+})();
+</script>
 </body>
 </html>
