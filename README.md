@@ -1,4 +1,4 @@
-# Órbita
+# Sessio
 
 App para clínicas de terapia: agenda com confirmação pelo WhatsApp, pacientes, fila de espera, ciclo de guias da Unimed, evoluções e caixa, com um painel para cada profissional.
 
@@ -24,20 +24,20 @@ Uma consequência: se um paciente já existe e outra profissional vai começar a
 ## Como colocar no ar
 
 ### 1. Supabase (banco e login)
-1. Em [supabase.com](https://supabase.com), crie um projeto chamado `orbita`, na região **South America (São Paulo)**. Guarde a senha do banco.
+1. Em [supabase.com](https://supabase.com), crie um projeto chamado `sessio`, na região **South America (São Paulo)**. Guarde a senha do banco.
 2. No menu da esquerda, abra **SQL Editor** → **New query**. Cole todo o conteúdo do arquivo `supabase/schema.sql` e clique em **Run**. Deve aparecer "Success".
 3. Abra **Authentication** → **Sign In / Providers** → **Email** e **desligue "Confirm email"**. O envio de e-mails que vem com o Supabase só entrega para quem faz parte da sua equipe no Supabase, no máximo 2 por hora. Sem desligar, as profissionais não recebem o link de confirmação. O "Esqueci a senha" também depende de e-mail: para ele funcionar para todo mundo, configure um serviço de e-mail próprio em **Authentication** → **Emails** → **SMTP** (o Resend tem plano gratuito). Enquanto isso não estiver configurado, quem esquecer a senha precisa criar uma conta nova e pedir acesso de novo.
 4. Abra **Project Settings** → **API** (ou **Data API**). Copie a **Project URL** e a chave **anon public** (às vezes aparece como **publishable**).
 
 ### 2. GitHub (código)
-1. No repositório do projeto (por exemplo, `orbita`), clique em **Add file** → **Upload files** e arraste todos os arquivos desta pasta, incluindo a pasta `supabase`. Clique em **Commit changes**.
+1. No repositório do projeto (por exemplo, `sessio`), clique em **Add file** → **Upload files** e arraste todos os arquivos desta pasta, incluindo a pasta `supabase`. Clique em **Commit changes**.
 2. Abra o arquivo `config.js` no GitHub, clique no lápis e cole a Project URL e a chave anon public nos lugares indicados. Clique em **Commit changes**.
    Nunca cole ali a chave `service_role` ou `secret`.
 
 ### 3. Vercel (endereço do app)
 1. Em [vercel.com](https://vercel.com), entre com a mesma conta do GitHub. Clique em **Add New** → **Project** e importe o repositório.
 2. Em **Framework Preset**, escolha **Other** e clique em **Deploy**. Não precisa configurar mais nada.
-3. Copie o endereço que a Vercel criar (algo como `orbita-xxxx.vercel.app`).
+3. Copie o endereço que a Vercel criar (algo como `sessio-xxxx.vercel.app`).
 
 ### 4. Último ajuste no Supabase
 Em **Authentication** → **URL Configuration**:
@@ -57,7 +57,7 @@ Isso faz o link de "Esqueci a senha" voltar para o app.
 Quem recebe o pagamento das sessões particulares define o documento. Isso é configurado por profissional em **Clínica → Equipe → "Quem recebe as sessões particulares"**:
 
 - **A própria profissional (pessoa física):** desde 1º/01/2025, fonoaudiólogas, terapeutas ocupacionais, psicólogas, fisioterapeutas, médicas e dentistas pessoa física são obrigadas a emitir o recibo pelo app **Receita Saúde** (IN RFB 2.240/2024). O Receita Saúde não tem integração; a aba **Fiscal → Receita Saúde** lista o que cada profissional precisa lançar no mês (pagador, CPF, datas e valores), com um botão para copiar os dados e outro para marcar como emitido.
-- **A clínica (CNPJ):** o documento é a **NFS-e**. A aba **Fiscal → Notas fiscais** agrupa as sessões pagas de cada paciente e emite a nota pela Órbita. Só a dona emite e cancela.
+- **A clínica (CNPJ):** o documento é a **NFS-e**. A aba **Fiscal → Notas fiscais** agrupa as sessões pagas de cada paciente e emite a nota pelo Sessio. Só a dona emite e cancela.
 - **Fiscal → Contador:** resumo do mês e planilha (.csv) com cada sessão paga, CPF do pagador, forma de pagamento, nota ou recibo e repasse.
 
 Para isso, a ficha do paciente ganhou os campos **Quem paga** (nome, CPF e e-mail do pagador) e cada profissional informa CPF e registro no conselho em **Conta**. Sessões da Unimed não entram: quem paga é o convênio.
@@ -72,7 +72,7 @@ A nota é emitida por uma função que roda no servidor do Supabase e fala com a
 4. **No app**, em **Clínica → Fiscal**, preencha CNPJ, inscrição municipal, código IBGE do município (Maceió: 2704302), Simples Nacional, alíquota e, se o contador indicar, o item da lista de serviços e o código de tributação do município. Deixe o ambiente em **Testes** até uma nota de teste sair autorizada; depois mude para **Produção**.
 5. Emita uma nota de teste em **Fiscal → Notas fiscais**. Notas de teste aparecem com a marca "teste" e não valem.
 
-Confira com o contador o item da lista de serviços (normalmente 04.08 para fono, TO e fisioterapia e 04.16 para psicologia), a alíquota e o regime. A Órbita não substitui o contador.
+Confira com o contador o item da lista de serviços (normalmente 04.08 para fono, TO e fisioterapia e 04.16 para psicologia), a alíquota e o regime. O Sessio não substitui o contador.
 
 ## Reuniões e atas (só a dona)
 

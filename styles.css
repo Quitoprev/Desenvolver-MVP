@@ -1,16 +1,16 @@
-/* Órbita — app de uma coluna, cabeçalho fixo com abas. Índigo da marca, coral como acento, pontos coloridos só no símbolo. */
+/* Rythmos — app de uma coluna, cabeçalho fixo com abas. Marinho da marca, menta como acento, gelo nos fundos. */
 :root{
-  --bg:#F4F5FA; --surface:#FFFFFF; --sunk:#EBEDF5; --ink:#14213D; --muted:#5A6478; --line:#E1E4EE;
-  --accent:#3B4FD8; --accent-ink:#FFFFFF; --glow:#F2735A; --glow-soft:#FDEBE6;
-  --ok:#1C7F4A; --ok-bg:#E2F3EA; --warn:#94600B; --warn-bg:#FCF1DA; --bad:#B8392F; --bad-bg:#FBE5E2; --info:#2F55B5; --info-bg:#E6ECFA;
-  --display:"Sora","Avenir Next","Segoe UI",system-ui,sans-serif;
-  --body:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+  --bg:#EEF6F8; --surface:#FFFFFF; --sunk:#E2EDF1; --ink:#12233D; --muted:#475569; --line:#D6E2E8;
+  --accent:#12233D; --accent-ink:#FFFFFF; --glow:#5CC8A8; --glow-soft:#DDF3EC;
+  --ok:#1F7A62; --ok-bg:#E3F5EF; --warn:#92400E; --warn-bg:#FEF3C7; --bad:#B42318; --bad-bg:#FDECEA; --info:#2C5A9E; --info-bg:#E8EDF5;
+  --display:"Manrope","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
   --r:14px; color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
-  --bg:#0D1222; --surface:#151B30; --sunk:#1C2440; --ink:#E6E9F5; --muted:#9AA3BD; --line:#283050;
-  --accent:#7E8CFF; --accent-ink:#0B1030; --glow:#F58C76; --glow-soft:#3A2522;
-  --ok:#5CCB8E; --ok-bg:#17301F; --warn:#EAB45C; --warn-bg:#382B14; --bad:#F2857B; --bad-bg:#3A1E1C; --info:#93A6FF; --info-bg:#1E2850;
+  --bg:#0C1527; --surface:#12233D; --sunk:#1A2D4A; --ink:#E8EEF5; --muted:#9AAABE; --line:#243A58;
+  --accent:#5CC8A8; --accent-ink:#06211A; --glow:#5CC8A8; --glow-soft:#173A32;
+  --ok:#5CCB8E; --ok-bg:#163224; --warn:#E8B45A; --warn-bg:#382B14; --bad:#F2857B; --bad-bg:#3A1E1C; --info:#8FB0F0; --info-bg:#1C2B4A;
   color-scheme:dark}}
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -23,10 +23,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .top{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
 .top .wrap{display:flex;flex-direction:column;gap:10px;padding-block:12px 0}
 .brand{display:flex;align-items:center;gap:10px}
-.mark{width:34px;height:34px;flex:none;display:block}
-.mk-orb{fill:none;stroke:var(--ink)}
-.mk-core{fill:var(--accent)}
-.word{font-family:var(--display);font-weight:600;font-size:22px;letter-spacing:-.02em;line-height:1}
+.mark{width:42px;height:28px;flex:none;display:block}
+.mk-line{stroke:var(--ink)}
+.mk-dot{fill:var(--glow)}
+.word{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.03em;line-height:1}
 .clinic{color:var(--muted);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .iconbtn{border:1px solid var(--line);background:transparent;border-radius:10px;height:34px;padding:0 10px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;white-space:nowrap}
 .tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
@@ -132,7 +132,7 @@ tfoot td{font-weight:700}
 .empty strong{color:var(--ink);font-family:var(--display);font-size:17px}
 .banner{background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px;font-weight:500}
 
-.fab{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:6;background:var(--accent);color:var(--accent-ink);border:0;border-radius:16px;padding:14px 18px;font-weight:700;font-size:15px;box-shadow:0 6px 18px rgba(59,79,216,.3);cursor:pointer}
+.fab{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:6;background:var(--accent);color:var(--accent-ink);border:0;border-radius:16px;padding:14px 18px;font-weight:700;font-size:15px;box-shadow:0 6px 18px rgba(18,35,61,.3);cursor:pointer}
 
 .scrim{position:fixed;inset:0;background:rgba(8,20,18,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--surface);width:100%;max-width:580px;max-height:92%;overflow:auto;border-radius:20px 20px 0 0;padding:18px max(18px,env(safe-area-inset-left,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
@@ -171,7 +171,7 @@ form{display:flex;flex-direction:column;gap:14px;margin:0}
 .gate{min-height:100vh;display:grid;place-items:center;padding:32px max(16px,env(safe-area-inset-left,0px))}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:24px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:16px}
 .card .brand .word{font-size:28px}
-.card .brand .mark{width:42px;height:42px}
+.card .brand .mark{width:54px;height:36px}
 .cards2{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:820px}
 .err{color:var(--bad);font-size:13px;font-weight:600}
 .linkbtn{background:none;border:0;color:var(--accent);font-weight:600;cursor:pointer;padding:0;font-size:14px}

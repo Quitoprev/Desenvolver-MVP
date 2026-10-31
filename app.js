@@ -1,4 +1,4 @@
-/* Órbita — app da clínica. Sem etapa de build: este arquivo roda direto no navegador.
+/* Rythmos — app da clínica. Sem etapa de build: este arquivo roda direto no navegador.
    Quem protege os dados é o banco (supabase/schema.sql); o app só mostra o que o banco entrega. */
 "use strict";
 
@@ -57,7 +57,7 @@ function errMsg(e){
 function fail(e){console.error(e);toast(errMsg(e))}
 
 /* ================= Supabase ================= */
-const CFG=window.ORBITA_CONFIG||{};
+const CFG=window.RYTHMOS_CONFIG||{};
 const configurado=CFG.SUPABASE_URL&&/^https:\/\//.test(CFG.SUPABASE_URL)&&CFG.SUPABASE_ANON_KEY&&!/COLE_AQUI/.test(CFG.SUPABASE_ANON_KEY);
 const sb=configurado&&window.supabase?window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY):null;
 async function run(p){const{data,error}=await p;if(error)throw error;return data}
@@ -66,8 +66,8 @@ async function fetchAll(build){let out=[],from=0;const step=1000;for(;;){const{d
 /* ================= estado ================= */
 const S={
   user:null, me:null, clinica:{}, membros:[], pac:[], vin:[], ses:[], evo:{}, pag:{}, cic:{},
-  tab:lsGet("orbita.tab")||"agenda", dia:hoje(), uniMes:ymOf(hoje()), cxMes:ymOf(hoje()),
-  prof:lsGet("orbita.prof")||"", busca:"", filtroSit:"ativo", envio:null, loaded:false, lastLoad:0,
+  tab:lsGet("rythmos.tab")||"agenda", dia:hoje(), uniMes:ymOf(hoje()), cxMes:ymOf(hoje()),
+  prof:lsGet("rythmos.prof")||"", busca:"", filtroSit:"ativo", envio:null, loaded:false, lastLoad:0,
   fxMes:ymOf(hoje()), fxSub:"receita", notas:[], reunioes:[], rec:null,
   extra:{} // caixa de meses fora da janela carregada
 };
@@ -115,8 +115,8 @@ async function loadAll(){
 
 /* ================= entrada (login, clínica, aprovação) ================= */
 function gate(html){$("app").hidden=true;const g=$("gate");g.hidden=false;g.innerHTML=html}
-const LOGO=`<svg class="mark" viewBox="0 0 120 120" aria-hidden="true"><g transform="rotate(-20 60 60)"><ellipse class="mk-orb" cx="60" cy="60" rx="52" ry="22" stroke-width="7"/><circle class="mk-core" cx="60" cy="60" r="18"/><circle cx="112" cy="60" r="9" fill="#F2735A"/><circle cx="76.1" cy="80.9" r="9" fill="#F5B83D"/><circle cx="17.9" cy="72.9" r="9" fill="#1E9A90"/><circle cx="17.9" cy="47.1" r="9" fill="#8C6FE0"/><circle cx="76.1" cy="39.1" r="9" fill="#F2735A"/></g></svg>`;
-function gateBrand(){return`<div class="brand">${LOGO}<span class="word">órbita</span></div>`}
+const LOGO=`<svg class="mark" viewBox="0 0 60 40" aria-hidden="true"><path class="mk-line" d="M5 29 C12 29 13 20 20 20 C27 20 28 27 35 25 C41 23 42 14 46 12" fill="none" stroke-width="5" stroke-linecap="round"/><circle class="mk-dot" cx="53" cy="10" r="6"/></svg>`;
+function gateBrand(){return`<div class="brand">${LOGO}<span class="word">rythmos</span></div>`}
 
 function telaConfig(){
   gate(`<div class="card">${gateBrand()}<h2>Falta conectar o banco</h2>
@@ -161,7 +161,7 @@ function telaNovaSenha(){
 
 function telaOnboarding(){
   gate(`<div style="display:flex;flex-direction:column;gap:16px;align-items:center;width:100%">
-  <div class="card" style="max-width:820px">${gateBrand()}<div><h2>Bem-vinda à Órbita</h2><p class="note">Sua conta (${esc(S.user.email)}) ainda não está em nenhuma clínica.</p></div></div>
+  <div class="card" style="max-width:820px">${gateBrand()}<div><h2>Bem-vinda ao Rythmos</h2><p class="note">Sua conta (${esc(S.user.email)}) ainda não está em nenhuma clínica.</p></div></div>
   <div class="cards2">
     <form class="card" id="fEntrar"><h2>Entrar na clínica</h2><p class="note">Para as profissionais da clínica. Peça o código à dona.</p>
       <div class="f"><label for="o_cod">Código da clínica</label><input id="o_cod" name="codigo" required autocapitalize="characters" maxlength="12" style="text-transform:uppercase;letter-spacing:.15em"></div>
@@ -554,7 +554,7 @@ function vFiscal(){
 function agrupar(L){const g={};for(const x of L){const k=x.s.paciente_id+"|"+x.s.profissional_id;(g[k]=g[k]||{p:x.p,m:x.m,itens:[]}).itens.push(x)}return Object.values(g).sort((a,b)=>byNome(a.p,b.p))}
 function vReceitaSaude(pf){
   const mostrarProf=isEquipe()&&!S.prof;
-  let h=`<p class="note">Sessões particulares pagas a profissionais autônomas. Desde 2025, o recibo é obrigatório pelo app <b>Receita Saúde</b> (gov.br), em nome da própria profissional. A Órbita prepara o que lançar e marca o que já foi emitido.</p>`;
+  let h=`<p class="note">Sessões particulares pagas a profissionais autônomas. Desde 2025, o recibo é obrigatório pelo app <b>Receita Saúde</b> (gov.br), em nome da própria profissional. O Rythmos prepara o que lançar e marca o que já foi emitido.</p>`;
   if(!pf.length)return h+'<div class="empty"><strong>Nada a lançar neste mês</strong><span>Aparecem aqui as sessões pagas de profissionais que recebem como pessoa física (Equipe → "Quem recebe").</span></div>';
   for(const g of agrupar(pf)){
     const pend=g.itens.filter(x=>!x.pg.receita_saude_em),tot=g.itens.reduce((a,x)=>a+x.valor,0);
@@ -569,7 +569,7 @@ function vReceitaSaude(pf){
 function vNotas(cl,M){
   const mostrarProf=isEquipe()&&!S.prof;
   const fx=S.clinica.fiscal||{},cfgOk=fx.cnpj&&fx.inscricao_municipal&&fx.codigo_municipio;
-  let h=`<p class="note">Sessões particulares pagas à clínica (CNPJ). A nota fiscal de serviço (NFS-e) é emitida pela Órbita em nome da clínica${fx.ambiente==="producao"?"":", <b>em ambiente de testes</b> até você ligar a produção em Clínica → Fiscal"}.</p>`;
+  let h=`<p class="note">Sessões particulares pagas à clínica (CNPJ). A nota fiscal de serviço (NFS-e) é emitida pelo Rythmos em nome da clínica${fx.ambiente==="producao"?"":", <b>em ambiente de testes</b> até você ligar a produção em Clínica → Fiscal"}.</p>`;
   if(isDona()&&!cfgOk)h+=`<div class="phase warn"><span>Antes de emitir, preencha os dados fiscais da clínica (CNPJ, inscrição municipal, município).</span><button class="btn" data-act="abrirClinica" data-sub="fiscal">Preencher</button></div>`;
   const semNota=cl.filter(x=>!x.pg.nota_id);
   if(semNota.length){
@@ -613,7 +613,7 @@ function exportCsv(M){
   const rows=L.sort((a,b)=>(a.s.data+a.s.hora).localeCompare(b.s.data+b.s.hora)).map(x=>{const n=x.pg.nota_id?notaDe(x.pg.nota_id):null;const pct=Number(x.m.repasse_pct||0);
     return[curto(x.s.data)+"/"+x.s.data.slice(0,4),hhmm(x.s.hora),x.p.nome,x.p.nome_pagador||x.p.responsavel||"",cpfFmt(x.p.cpf_pagador),x.m.nome||"",cpfFmt(x.m.cpf),x.m.registro||"",x.via==="pf"?"Profissional (PF)":"Clínica (CNPJ)",x.s.terapia||"",x.valor.toFixed(2).replace(".",","),x.pg.forma||"",x.pg.pago_em?curto(x.pg.pago_em)+"/"+x.pg.pago_em.slice(0,4):"",x.via==="pf"?"Receita Saúde":"NFS-e",n?(n.numero||n.status):"",x.pg.receita_saude_em?curto(x.pg.receita_saude_em)+"/"+x.pg.receita_saude_em.slice(0,4):"",pct?String(pct).replace(".",","):"0",(x.valor*pct/100).toFixed(2).replace(".",",")]});
   const csv="\ufeff"+[cab,...rows].map(r=>r.map(esc2).join(";")).join("\r\n");
-  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=`orbita-${(S.clinica.nome||"clinica").replace(/\W+/g,"-").toLowerCase()}-${M}.csv`;document.body.appendChild(a);a.click();a.remove();
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=`rythmos-${(S.clinica.nome||"clinica").replace(/\W+/g,"-").toLowerCase()}-${M}.csv`;document.body.appendChild(a);a.click();a.remove();
 }
 function dadosRS(k){const[pid,uid]=k.split("|");const L=(fxDados(S.fxMes)||[]).filter(x=>x.via==="pf"&&x.s.paciente_id===pid&&x.s.profissional_id===uid);return{pid,uid,L}}
 async function nfseCall(body){const{data,error}=await sb.functions.invoke("nfse",{body});if(error){let m=error.message;try{const j=await error.context.json();if(j&&j.erro)m=j.erro}catch{}throw new Error(m)}if(data&&data.erro)throw new Error(data.erro);return data}
@@ -652,7 +652,7 @@ function md(t){ // Markdown simples e seguro: títulos, negrito, listas e tabela
 }
 function vReunioes(){
   let h=`<div><div class="eyebrow">Só você vê esta aba</div><h2>Reuniões e atas</h2></div>
-  <p class="note">Grave a reunião ao vivo ou envie uma gravação. A Órbita transcreve, gera a ata com pauta, decisões e encaminhamentos, e você revisa antes de guardar. Pacientes aparecem só pelas iniciais, e o áudio é apagado depois da transcrição.</p>`;
+  <p class="note">Grave a reunião ao vivo ou envie uma gravação. O Rythmos transcreve, gera a ata com pauta, decisões e encaminhamentos, e você revisa antes de guardar. Pacientes aparecem só pelas iniciais, e o áudio é apagado depois da transcrição.</p>`;
   if(!S.reunioes.length)return h+'<div class="empty"><strong>Nenhuma reunião ainda</strong><span>Toque em Nova reunião. Na reunião de equipe, deixe o celular sobre a mesa gravando.</span></div>';
   h+='<div class="list">';
   for(const r of S.reunioes){const[cls,lbl]=REU_ST[r.status]||["p-mute",r.status];
@@ -874,7 +874,7 @@ function sheetSessao(s,presetVin){
     $("fSes").onsubmit=async e=>{
       e.preventDefault();const d=Object.fromEntries(new FormData(e.target));const n=Number(d.repetir||1);
       const rows=Array.from({length:n},(_,i)=>({vinculo_id:d.vinculo_id,data:addDays(d.data,7*i),hora:d.hora,status:"agendada"}));
-      try{await run(sb.from("sessoes").insert(rows));S.dia=d.data;closeSheet();toast(n>1?`${n} sessões agendadas`:"Sessão agendada");S.tab="agenda";lsSet("orbita.tab","agenda");reload(["ses"])}catch(err){fail(err)}
+      try{await run(sb.from("sessoes").insert(rows));S.dia=d.data;closeSheet();toast(n>1?`${n} sessões agendadas`:"Sessão agendada");S.tab="agenda";lsSet("rythmos.tab","agenda");reload(["ses"])}catch(err){fail(err)}
     };
     return;
   }
@@ -933,7 +933,7 @@ function sheetClinica(sub){
   let body="";
   if(clinicaSub==="equipe"){
     const pend=S.membros.filter(m=>!m.ativo),ativos=S.membros.filter(m=>m.ativo).sort(byNome);
-    body=`<div class="list"><div class="urow"><div><div class="eyebrow">Código para entrar na clínica</div><div class="code">${esc(S.clinica.codigo_convite||"")}</div><p class="note">Quem vai usar a Órbita cria a conta, escolhe "Entrar na clínica" e digita este código. Depois você aprova aqui.</p></div>
+    body=`<div class="list"><div class="urow"><div><div class="eyebrow">Código para entrar na clínica</div><div class="code">${esc(S.clinica.codigo_convite||"")}</div><p class="note">Quem vai usar o Rythmos cria a conta, escolhe "Entrar na clínica" e digita este código. Depois você aprova aqui.</p></div>
       <div style="display:flex;flex-direction:column;gap:6px"><button type="button" class="btn" data-act="copyCode">Copiar</button><button type="button" class="btn" data-act="novoCodigo">Trocar código</button></div></div></div>
     ${pend.length?`<div><div class="eyebrow" style="margin-bottom:6px">Pedidos de acesso</div><div class="list">${pend.map(m=>`<div class="urow"><div><div class="name">${esc(m.nome)}</div><div class="sub">Pediu acesso em ${esc(new Date(m.criado_em).toLocaleDateString("pt-BR"))}</div></div><span></span>
       <div class="acts"><button type="button" class="btn primary" data-act="aprovar" data-id="${m.user_id}">Aprovar</button><button type="button" class="btn danger" data-act="recusar" data-id="${m.user_id}">Recusar</button></div></div>`).join("")}</div></div>`:""}
@@ -968,7 +968,7 @@ function sheetClinica(sub){
       <div class="foot"><div class="r"><button class="btn primary" type="submit">Salvar</button></div></div></form>`;
   }else{
     const temEx=S.pac.some(p=>p.exemplo);
-    body=`<div class="empty"><strong>Dados de exemplo</strong><span>Cria 5 pacientes fictícios atendidos por você, com sessões, um pagamento e o ciclo da Unimed, para mostrar a Órbita funcionando. Eles aparecem marcados como exemplo.</span>
+    body=`<div class="empty"><strong>Dados de exemplo</strong><span>Cria 5 pacientes fictícios atendidos por você, com sessões, um pagamento e o ciclo da Unimed, para mostrar o Rythmos funcionando. Eles aparecem marcados como exemplo.</span>
       <div class="toolbar" style="justify-content:center"><button type="button" class="btn primary" data-act="carregarEx">Carregar exemplos</button>${temEx?'<button type="button" class="btn danger" data-act="apagarEx">Apagar exemplos</button>':""}</div></div>`;
   }
   openSheet(`<header><h2>${esc(S.clinica.nome||"Clínica")}</h2><button type="button" class="iconbtn" data-act="close">Fechar</button></header>
@@ -1089,12 +1089,12 @@ async function acao(a,t){
 
 document.addEventListener("click",e=>{
   const tab=e.target.closest(".tab");
-  if(tab){S.tab=tab.dataset.tab;lsSet("orbita.tab",S.tab);render();window.scrollTo(0,0);return}
+  if(tab){S.tab=tab.dataset.tab;lsSet("rythmos.tab",S.tab);render();window.scrollTo(0,0);return}
   const t=e.target.closest("[data-act]");if(!t)return;
   acao(t.dataset.act,t);
 });
 document.addEventListener("change",e=>{
-  if(e.target.dataset.change==="prof"){S.prof=e.target.value;lsSet("orbita.prof",S.prof);render()}
+  if(e.target.dataset.change==="prof"){S.prof=e.target.value;lsSet("rythmos.prof",S.prof);render()}
 });
 document.addEventListener("input",e=>{
   if(e.target.id==="busca"){S.busca=e.target.value;const pos=e.target.selectionStart;render();const b=$("busca");if(b){b.focus();b.setSelectionRange(pos,pos)}}

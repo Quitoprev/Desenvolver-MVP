@@ -1,4 +1,4 @@
-// Órbita — reuniões: transcrição de áudio e geração de ata (roda no servidor do Supabase).
+// Sessio — reuniões: transcrição de áudio e geração de ata (roda no servidor do Supabase).
 //
 // Só a dona da clínica pode usar. As chaves dos serviços de IA ficam em
 // segredos da função, nunca no navegador.

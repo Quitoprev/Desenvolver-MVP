@@ -1,5 +1,5 @@
 -- ============================================================
--- Órbita — banco de dados (Supabase / Postgres)
+-- Sessio — banco de dados (Supabase / Postgres)
 -- Cole este arquivo inteiro no SQL Editor do Supabase e clique em Run.
 -- Pode rodar de novo sem perder dados: ele só cria o que falta e
 -- atualiza funções e regras de acesso.

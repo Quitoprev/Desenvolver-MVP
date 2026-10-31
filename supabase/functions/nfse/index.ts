@@ -1,4 +1,4 @@
-// Órbita — emissão de NFS-e (função que roda no servidor do Supabase).
+// Sessio — emissão de NFS-e (função que roda no servidor do Supabase).
 //
 // Por que no servidor: o token do emissor de notas e a chave de serviço do
 // banco não podem ficar no navegador. O app só pede "emita a nota X";
