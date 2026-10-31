@@ -15,6 +15,7 @@ Cada pessoa da equipe tem uma **função**, escolhida ao pedir acesso e confirma
 | Fila de espera | toda | toda | só a dela |
 | Unimed | tudo | tudo | só os atendimentos dela |
 | Evoluções | todas | não vê | só as que ela escreveu |
+| Prontuário (anamnese, avaliação, relatórios, anexos) | de todos | não vê | só da terapia dela |
 | Caixa e Fiscal | de todas, com fechamento | não vê | só o dela |
 | Reuniões e atas | sim | não | não |
 | Equipe, mensagens, logo, importação | sim | não | não |
@@ -26,7 +27,7 @@ Essas regras ficam no banco de dados (Supabase), não só na tela. Mesmo alguém
 ## Como colocar no ar
 
 ### 1. Supabase (banco e login)
-1. Em [supabase.com](https://supabase.com), crie um projeto chamado `sessio`, na região **South America (São Paulo)**. Guarde a senha do banco.
+1. Em [supabase.com](https://supabase.com), crie um projeto chamado `rythmos`, na região **South America (São Paulo)**. Guarde a senha do banco.
 2. No menu da esquerda, abra **SQL Editor** → **New query**. Cole todo o conteúdo do arquivo `supabase/schema.sql` e clique em **Run**. Deve aparecer "Success".
 3. Abra **Authentication** → **Sign In / Providers** → **Email** e **desligue "Confirm email"**. O envio de e-mails que vem com o Supabase só entrega para quem faz parte da sua equipe no Supabase, no máximo 2 por hora. Sem desligar, as profissionais não recebem o link de confirmação. O "Esqueci a senha" também depende de e-mail: para ele funcionar para todo mundo, configure um serviço de e-mail próprio em **Authentication** → **Emails** → **SMTP** (o Resend tem plano gratuito). Enquanto isso não estiver configurado, quem esquecer a senha precisa criar uma conta nova e pedir acesso de novo.
 4. Abra **Project Settings** → **API** (ou **Data API**). Copie a **Project URL** e a chave **anon public** (às vezes aparece como **publishable**).
@@ -106,6 +107,19 @@ Custo aproximado: transcrição em torno de US$ 0,006 por minuto de áudio (uma 
 - **Caixa:** entram as sessões marcadas como Presente. Nas particulares, registra-se o pagamento (pago ou em aberto, e a forma). As da Unimed entram pelo valor da terapia. A dona vê o fechamento por profissional, com o repasse.
 - **WhatsApp:** o app abre a conversa com a mensagem pronta, e alguém toca em enviar. Envio automático exige a API oficial do WhatsApp Business.
 
+## Prontuário, relatórios em Word e documentos
+
+Na ficha do paciente, o botão **Prontuário** abre o registro clínico da terapia (uma por profissional: a fono não vê o prontuário da TO do mesmo paciente; a dona vê todos). São quatro campos de texto livre:
+
+- **Anamnese:** queixa, história do desenvolvimento, saúde, família, escola.
+- **Avaliação:** instrumentos e protocolos aplicados (nome, data, resultado), observação clínica, hipótese. Os testes em si não cabem no app: o resultado é descrito aqui e o protocolo preenchido pode ser anexado em PDF ou foto.
+- **Habilidades:** o que a criança já faz, o que está emergindo, o que ainda não faz.
+- **Objetivos terapêuticos:** metas do período.
+
+**Gerar relatório (Word)** monta um .docx com logo e nome da clínica, identificação do paciente, terapia e profissional, o período escolhido, anamnese e avaliação, habilidades, objetivos, frequência (sessões, presenças, faltas) e todas as evoluções do período, mais o parecer que a profissional escreve na hora e a linha de assinatura. Dá para escolher o tipo (evolução, avaliação, escola, convênio) e o que incluir. O arquivo abre no Word para revisar e assinar e, se "Guardar no prontuário" estiver marcado, fica salvo na lista de **Documentos** do paciente.
+
+**Anexar arquivo** guarda laudos, protocolos preenchidos, encaminhamentos e relatórios antigos (PDF, Word, imagem, planilha, até 25 MB) na mesma lista. Os arquivos ficam num espaço privado do Supabase (bucket `documentos`); "Abrir" gera um link que vale cinco minutos. Quem anexou, ou a dona, pode apagar.
+
 ## Jogos para a sessão
 
 A aba **Jogos** (dona e profissionais) tem dez atividades para usar no tablet com a criança, sem cronômetro, sem pontuação negativa e sem efeitos que piscam. Som desligado por padrão; "Falar as palavras" liga a voz em português.
@@ -127,7 +141,7 @@ No fim da rodada, "Registrar na evolução" anota acertos, tentativas e tempo (o
 
 ## Arquivos
 
-- `index.html`, `styles.css`, `app.js`, `jogos.js`: o app. Roda direto no navegador, sem etapa de build.
+- `index.html`, `styles.css`, `app.js`, `jogos.js`, `prontuario.js`: o app. Roda direto no navegador, sem etapa de build.
 - `config.js`: endereço e chave pública do Supabase.
 - `supabase/schema.sql`: tabelas, regras de acesso e funções. Pode ser rodado de novo para atualizar, sem perder dados.
 - `supabase/functions/nfse/index.ts`: função que emite, consulta e cancela a NFS-e (roda no Supabase).

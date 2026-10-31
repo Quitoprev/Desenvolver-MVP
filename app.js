@@ -989,6 +989,7 @@ async function sheetPaciente(p,opt){
     <div class="f"><label for="v_ini">Atendimento inicial pelo convênio</label><input id="v_ini" name="v_inicio" type="date"></div>
     <div class="f"><label for="v_pri">Prioridade na fila</label><select id="v_pri" name="v_prioridade"><option value="normal">Normal</option><option value="alta">Alta</option></select></div>`:""}
   </div>
+  ${!novo&&typeof podeProntuario==="function"&&podeProntuario(p.id)?`<div class="toolbar"><button type="button" class="btn primary" data-act="abrirPront" data-id="${p.id}">Prontuário · anamnese, avaliação, relatórios</button></div>`:""}
   ${!novo?`<div><div class="toolbar" style="justify-content:space-between;margin-bottom:6px"><div class="eyebrow">Terapias</div><button type="button" class="btn" data-act="novoVin" data-id="${p.id}">+ Adicionar terapia</button></div>
     <div class="hist">${vs.map(v=>`<div data-act="editVin" data-id="${v.id}" role="button" tabindex="0"><span><b>${esc(v.terapia)}</b> · ${esc(v.profissional_id?nomeProf(v.profissional_id):"sem profissional")}${v.valor_sessao?" · "+money(v.valor_sessao):""}</span><span class="pill ${v.situacao==="ativo"?"p-ok":v.situacao==="fila"?"p-warn":"p-mute"}">${SITUACAO[v.situacao]}</span></div>`).join("")||'<div><span class="note">Nenhuma terapia cadastrada</span></div>'}</div></div>`:""}
   ${hist.length?`<div><div class="eyebrow" style="margin-bottom:6px">Sessões</div><div class="hist">${hist.map(s=>`<div ${S.evo[s.id]&&(podeEvolucao(s)||isProf())?`data-act="evo" data-id="${s.id}" role="button" tabindex="0"`:""}><span>${esc(fmtDia(s.data))} · ${hhmm(s.hora)} · ${esc(s.terapia||"")}${isEquipe()?" · "+esc(chamar(nomeProf(s.profissional_id))):""}</span><span style="display:flex;gap:6px">${S.evo[s.id]?'<span class="pill p-confirmada">evolução</span>':""}<span class="pill p-${s.status}">${STATUS[s.status]}</span></span></div>`).join("")}</div></div>`:""}
@@ -1312,6 +1313,7 @@ document.addEventListener("click",e=>{
   if(tab){S.tab=tab.dataset.tab;lsSet("rythmos.tab",S.tab);render();window.scrollTo(0,0);return}
   const t=e.target.closest("[data-act]");if(!t)return;
   if(t.dataset.act.startsWith("jg")&&typeof jgAcao==="function"&&jgAcao(t.dataset.act,t))return;
+  if(/^(pr[A-Z]|abrirPront)/.test(t.dataset.act)&&typeof prAcao==="function"&&prAcao(t.dataset.act,t))return;
   acao(t.dataset.act,t);
 });
 document.addEventListener("change",e=>{
