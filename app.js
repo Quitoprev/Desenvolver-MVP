@@ -10,6 +10,7 @@ const funcaoDe=m=>m.papel==="recepcao"?"Recepcionista":(m.especialidade||"");
 const selFuncao=(id,name,v,extra)=>`<select id="${id}" name="${name}" ${extra||""}><option value="">Escolha…</option>${FUNCOES.map(f=>`<option ${f===v?"selected":""}>${f}</option>`).join("")}</select>`;
 const STATUS = {agendada:"Agendada",confirmada:"Confirmada",presente:"Presente",falta:"Falta",desmarcada:"Desmarcada"};
 const SITUACAO = {ativo:"Ativo",fila:"Na fila",pausado:"Pausado",alta:"Alta"};
+const FISCAL_ATIVO = false; // módulo fiscal (Receita Saúde, NFS-e, contador) guardado por enquanto
 const PAPEL = {dona:"Gestora",recepcao:"Recepção",profissional:"Profissional"};
 const FORMAS = ["Pix","Dinheiro","Cartão de débito","Cartão de crédito","Transferência"];
 const DEF = {
@@ -214,7 +215,8 @@ async function iniciar2(){
 /* ================= casca do app ================= */
 function tabs(){
   const t=[["agenda","Agenda"],["confirmacoes","Confirmações"],["pacientes","Pacientes"],["fila","Fila"],["unimed","Unimed"]];
-  if(canCaixa())t.push(["caixa","Caixa"],["fiscal","Fiscal"]);
+  if(canCaixa())t.push(["caixa","Caixa"]);
+  if(canCaixa()&&FISCAL_ATIVO)t.push(["fiscal","Fiscal"]);
   if(isDona())t.push(["painel","Painel"],["reunioes","Reuniões"]);
   if(canCaixa())t.push(["jogos","Jogos"]);
   return t;
@@ -224,11 +226,11 @@ function render(){
   $("clinicName").textContent=S.me?(S.clinica.nome||S.me.clinica)+" · "+(isProf()?S.me.nome:PAPEL[papel()]):"";
   $("btnClinica").hidden=!isDona();
   const lg=$("clinicLogo");if(S.clinica.logo){lg.src=S.clinica.logo;lg.hidden=false}else lg.hidden=true;
-  const pend=S.loaded?{agenda:minhasPendencias().length,fila:filaLista().length,unimed:pendUnimed(),fiscal:canCaixa()?pendFiscal():0,confirmacoes:semanaDados(S.semIni).famSemResposta}:{};
+  const pend=S.loaded?{agenda:minhasPendencias().length,fila:filaLista().length,unimed:pendUnimed(),fiscal:canCaixa()&&FISCAL_ATIVO?pendFiscal():0,confirmacoes:semanaDados(S.semIni).famSemResposta}:{};
   $("tabs").innerHTML=tabs().map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}${pend[k]?`<span class="n${k!=="fila"?" dot":""}">${pend[k]}</span>`:""}</button>`).join("");
   const fab=$("fab");
   const fl={agenda:"+ Nova sessão",pacientes:"+ Novo paciente",fila:"+ Adicionar à fila",reunioes:"+ Nova reunião"}[S.tab];
-  const pendFx=S.loaded&&canCaixa()?pendFiscal():0;
+  const pendFx=S.loaded&&canCaixa()&&FISCAL_ATIVO?pendFiscal():0;
   fab.hidden=!fl||!S.loaded;fab.textContent=fl||"";
   let h="";
   if(!S.loaded)h='<div class="empty"><span>Carregando…</span></div>';
@@ -978,10 +980,10 @@ async function sheetPaciente(p,opt){
     <div class="f"><label for="p_tel">WhatsApp do responsável</label><input id="p_tel" name="telefone" inputmode="tel" placeholder="(82) 99999-0000" value="${esc(p.telefone)}"></div>
     <div class="f"><label for="p_nasc">Nascimento</label><input id="p_nasc" name="nascimento" type="date" value="${esc(p.nascimento||"")}"></div>
     <div class="f"><label for="p_conv">Convênio</label><select id="p_conv" name="convenio">${["Particular","Unimed","Outro"].map(o=>`<option ${p.convenio===o?"selected":""}>${o}</option>`).join("")}</select></div>
-    <div class="f full"><div class="eyebrow">Quem paga (vai no recibo e na nota fiscal)</div></div>
+    ${FISCAL_ATIVO?`<div class="f full"><div class="eyebrow">Quem paga (vai no recibo e na nota fiscal)</div></div>
     <div class="f"><label for="p_pag">Nome do pagador</label><input id="p_pag" name="nome_pagador" placeholder="Se for diferente do responsável" value="${esc(p.nome_pagador||"")}"></div>
     <div class="f"><label for="p_cpf">CPF do pagador</label><input id="p_cpf" name="cpf_pagador" inputmode="numeric" placeholder="000.000.000-00" value="${esc(cpfFmt(p.cpf_pagador))}"></div>
-    <div class="f full"><label for="p_email">E-mail do pagador (recebe a nota)</label><input id="p_email" name="email_pagador" type="email" value="${esc(p.email_pagador||"")}"></div>
+    <div class="f full"><label for="p_email">E-mail do pagador (recebe a nota)</label><input id="p_email" name="email_pagador" type="email" value="${esc(p.email_pagador||"")}"></div>`:""}
     <div class="f full"><label for="p_obs">Observações</label><textarea id="p_obs" name="observacoes">${esc(p.observacoes)}</textarea></div>
     ${novo?`<div class="f full"><div class="eyebrow">Primeira terapia</div></div>
     <div class="f"><label for="v_ter">Terapia</label><input id="v_ter" name="v_terapia" list="dlTer" required value="${esc(isProf()?(membro(meuId())||{}).especialidade||"":"")}"></div>
@@ -1000,9 +1002,10 @@ async function sheetPaciente(p,opt){
   ${datalists()}</form>`);
   $("fPac").onsubmit=async e=>{
     e.preventDefault();const d=Object.fromEntries(new FormData(e.target));for(const k in d)d[k]=String(d[k]).trim();
-    const cpfD=d.cpf_pagador.replace(/\D/g,"");
+    const cpfD=String(d.cpf_pagador||"").replace(/\D/g,"");
     if(cpfD&&!cpfValido(cpfD))return toast("CPF do pagador inválido");
-    const dados={nome:d.nome,responsavel:d.responsavel||null,telefone:d.telefone||null,nascimento:d.nascimento||null,convenio:d.convenio,observacoes:d.observacoes||null,nome_pagador:d.nome_pagador||null,cpf_pagador:cpfD||null,email_pagador:d.email_pagador||null};
+    const dados={nome:d.nome,responsavel:d.responsavel||null,telefone:d.telefone||null,nascimento:d.nascimento||null,convenio:d.convenio,observacoes:d.observacoes||null};
+    if(FISCAL_ATIVO)Object.assign(dados,{nome_pagador:d.nome_pagador||null,cpf_pagador:cpfD||null,email_pagador:d.email_pagador||null});
     const btn=e.target.querySelector("[type=submit]");btn.disabled=true;
     try{
       if(novo){
@@ -1183,7 +1186,7 @@ function sheetClinica(sub){
       <div class="toolbar" style="justify-content:center"><button type="button" class="btn primary" data-act="carregarEx">Carregar exemplos</button>${temEx?'<button type="button" class="btn danger" data-act="apagarEx">Apagar exemplos</button>':""}</div></div>`;
   }
   openSheet(`<header><h2>${esc(S.clinica.nome||"Clínica")}</h2><button type="button" class="iconbtn" data-act="close">Fechar</button></header>
-  <div class="subtabs"><button type="button" data-act="clinSub" data-v="equipe" ${st("equipe")}>Equipe</button><button type="button" data-act="clinSub" data-v="mensagens" ${st("mensagens")}>Mensagens</button><button type="button" data-act="clinSub" data-v="fiscal" ${st("fiscal")}>Fiscal</button><button type="button" data-act="clinSub" data-v="importar" ${st("importar")}>Importar</button><button type="button" data-act="clinSub" data-v="exemplos" ${st("exemplos")}>Exemplos</button></div>${body}`);
+  <div class="subtabs"><button type="button" data-act="clinSub" data-v="equipe" ${st("equipe")}>Equipe</button><button type="button" data-act="clinSub" data-v="mensagens" ${st("mensagens")}>Mensagens</button>${FISCAL_ATIVO?`<button type="button" data-act="clinSub" data-v="fiscal" ${st("fiscal")}>Fiscal</button>`:""}<button type="button" data-act="clinSub" data-v="importar" ${st("importar")}>Importar</button><button type="button" data-act="clinSub" data-v="exemplos" ${st("exemplos")}>Exemplos</button></div>${body}`);
   const fl=$("logoFile");if(fl)fl.onchange=()=>trocarLogo(fl.files[0]);
   const fi=$("impFile");if(fi)fi.onchange=()=>lerPlanilha(fi.files[0]);
   const ff=$("fFiscal");
@@ -1202,8 +1205,8 @@ function sheetMembro(uid){
     <div class="f full"><label for="m_nome">Nome</label><input id="m_nome" name="nome" required value="${esc(m.nome)}"></div>
     <div class="f"><label for="m_func">Função</label>${eu?`<input id="m_func" value="Gestora da clínica" disabled>`:selFuncao("m_func","funcao",funcaoDe(m),"required")}</div>
     <div class="f"><label for="m_rep">Repasse à clínica (%)</label><input id="m_rep" name="repasse_pct" type="number" min="0" max="100" step="0.5" value="${esc(m.repasse_pct)}"></div>
-    <div class="f full"><div class="eyebrow">Fiscal</div></div>
-    <div class="f"><label for="m_rec">Quem recebe as sessões particulares</label><select id="m_rec" name="recebe"><option value="clinica" ${m.recebe!=="pf"?"selected":""}>A clínica (emite NFS-e)</option><option value="pf" ${m.recebe==="pf"?"selected":""}>A própria profissional (Receita Saúde)</option></select></div>
+    ${FISCAL_ATIVO?`    <div class="f full"><div class="eyebrow">Fiscal</div></div>
+    <div class="f"><label for="m_rec">Quem recebe as sessões particulares</label><select id="m_rec" name="recebe"><option value="clinica" ${m.recebe!=="pf"?"selected":""}>A clínica (emite NFS-e)</option><option value="pf" ${m.recebe==="pf"?"selected":""}>A própria profissional (Receita Saúde)</option></select></div>`:""}
     <div class="f"><label for="m_cpf">CPF</label><input id="m_cpf" name="cpf" inputmode="numeric" value="${esc(cpfFmt(m.cpf))}"></div>
     <div class="f"><label for="m_reg">Registro no conselho</label><input id="m_reg" name="registro" placeholder="CRFa 4-12345" value="${esc(m.registro||"")}"></div>
   </div>
@@ -1211,7 +1214,7 @@ function sheetMembro(uid){
   <div class="foot">${eu?"":`<button type="button" class="btn danger" data-act="remover" data-id="${uid}">Remover da clínica</button>`}<div class="r"><button class="btn primary" type="submit">Salvar</button></div></div>${datalists()}</form>`);
   $("fMem").onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
     const cpfD=String(d.cpf||"").replace(/\D/g,"");if(cpfD&&!cpfValido(cpfD))return toast("CPF inválido");
-    const up={nome:d.nome,repasse_pct:Number(d.repasse_pct||0),recebe:d.recebe,cpf:cpfD||null,registro:d.registro||null};if(!eu){const rec=d.funcao==="Recepcionista";up.papel=rec?"recepcao":"profissional";up.especialidade=rec?null:(d.funcao||null)}
+    const up={nome:d.nome,repasse_pct:Number(d.repasse_pct||0),recebe:d.recebe||m.recebe||"clinica",cpf:cpfD||null,registro:d.registro||null};if(!eu){const rec=d.funcao==="Recepcionista";up.papel=rec?"recepcao":"profissional";up.especialidade=rec?null:(d.funcao||null)}
     try{await run(sb.from("membros").update(up).eq("user_id",uid));await reload(["membros"]);toast("Equipe atualizada");sheetClinica("equipe")}catch(err){fail(err)}};
 }
 function sheetConta(){
@@ -1221,7 +1224,7 @@ function sheetConta(){
     <div class="f full"><label for="k_nome">Nome</label><input id="k_nome" name="nome" required value="${esc(S.me.nome)}"></div>
     <div class="f"><label for="k_cpf">CPF</label><input id="k_cpf" name="cpf" inputmode="numeric" value="${esc(cpfFmt((membro(meuId())||{}).cpf))}"></div>
     <div class="f"><label for="k_reg">Registro no conselho</label><input id="k_reg" name="registro" placeholder="CRFa 4-12345" value="${esc((membro(meuId())||{}).registro||"")}"></div></div>
-  <p class="note">${(membro(meuId())||{}).recebe==="pf"?"Você recebe as sessões particulares como pessoa física: o recibo sai pelo Receita Saúde, em seu nome.":"As sessões particulares são faturadas pela clínica."}</p>
+  ${FISCAL_ATIVO?`<p class="note">${(membro(meuId())||{}).recebe==="pf"?"Você recebe as sessões particulares como pessoa física: o recibo sai pelo Receita Saúde, em seu nome.":"As sessões particulares são faturadas pela clínica."}</p>`:""}
   <div class="f full" style="margin-top:6px"><label>Aparência</label><div class="statusgrid" style="margin-top:4px">${[["auto","Automático"],["light","Claro"],["dark","Escuro"]].map(([k,l])=>`<button type="button" data-act="tema" data-v="${k}" aria-pressed="${temaAtual()===k}">${l}</button>`).join("")}</div><span class="note">Automático segue o tema do aparelho.</span></div>
   <div class="foot"><button type="button" class="btn danger" data-act="sair">Sair</button><div class="r"><button type="button" class="btn" data-act="atualizar">Atualizar dados</button><button class="btn primary" type="submit">Salvar</button></div></div></form>`);
   $("fConta").onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));const cpfD=String(d.cpf||"").replace(/\D/g,"");if(cpfD&&!cpfValido(cpfD))return toast("CPF inválido");

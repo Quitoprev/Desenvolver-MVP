@@ -16,7 +16,7 @@ Cada pessoa da equipe tem uma **função**, escolhida ao pedir acesso e confirma
 | Unimed | tudo | tudo | só os atendimentos dela |
 | Evoluções | todas | não vê | só as que ela escreveu |
 | Prontuário (anamnese, avaliação, relatórios, anexos) | de todos | não vê | só da terapia dela |
-| Caixa e Fiscal | de todas, com fechamento | não vê | só o dela |
+| Caixa | de todas, com fechamento | não vê | só o dela |
 | Painel da clínica (evolução por área, metas estagnadas) | sim | não | não |
 | Reuniões e atas | sim | não | não |
 | Equipe, mensagens, logo, importação | sim | não | não |
@@ -56,7 +56,11 @@ Isso faz o link de "Esqueci a senha" voltar para o app.
 3. Em **Clínica** → **Equipe** está o **código da clínica**. Cada pessoa da equipe cria a própria conta, escolhe **Entrar na clínica**, digita o código e informa a função (Fonoaudiologia, Recepcionista etc.). Você aprova o pedido em **Clínica** → **Equipe**, confirmando a função.
 4. Em **Equipe**, defina a especialidade e o **repasse à clínica (%)** de cada profissional. É esse percentual que o caixa usa no fechamento.
 
-## Parte fiscal
+## Parte fiscal (guardada por enquanto)
+
+O módulo fiscal (lista do Receita Saúde, NFS-e via Focus NFe, exportação para o contador) está pronto mas **desligado**: a aba Fiscal, a subaba Clínica → Fiscal e os campos de pagador não aparecem. Para ligar, troque `const FISCAL_ATIVO = false` por `true` no início do `app.js`. As tabelas e a função `nfse` continuam no banco, sem uso.
+
+### Como funcionava
 
 Quem recebe o pagamento das sessões particulares define o documento. Isso é configurado por profissional em **Clínica → Equipe → "Quem recebe as sessões particulares"**:
 
