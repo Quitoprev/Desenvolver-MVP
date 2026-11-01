@@ -74,7 +74,7 @@ p{margin:0}
 .btn.danger{color:var(--bad)}
 .btn.big{padding:12px 16px;font-size:15px;justify-content:center}
 .btn[disabled]{opacity:.5;cursor:not-allowed}
-.pill{font-size:12px;font-weight:600;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.pill{font-size:12px;font-weight:600;border-radius:999px;padding:3px 9px;white-space:nowrap;flex:none;align-self:flex-start}
 .p-agendada,.p-mute{background:var(--sunk);color:var(--muted)}
 .p-confirmada,.uni{background:var(--info-bg);color:var(--info)}
 .p-presente,.p-ok{background:var(--ok-bg);color:var(--ok)}
@@ -152,7 +152,7 @@ form{display:flex;flex-direction:column;gap:14px;margin:0}
 .foot{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
 .foot .r{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
 .hist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;max-height:240px;overflow:auto}
-.hist>div{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:13px;font-variant-numeric:tabular-nums}
+.hist>div{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:13px;font-variant-numeric:tabular-nums}
 .hist>div:first-child{border-top:0}
 .hist>div[data-act]{cursor:pointer}
 .hist>div[data-act]:hover{background:var(--sunk)}
@@ -239,3 +239,7 @@ form{display:flex;flex-direction:column;gap:14px;margin:0}
 .jgBolha.fim,.jgBolha.pronto{transform:scale(1.2);transition-duration:1s}
 @media (max-width:520px){.jgSlot{width:72px;min-height:72px;font-size:10px}.jgSlot svg{width:44px;height:44px}.jgOpc{aspect-ratio:auto;padding:6px}.jgOpcoes[style*="repeat(4"]{grid-template-columns:repeat(2,1fr)!important}}
 @media (prefers-reduced-motion:reduce){.jgBolha{transition:none}}
+
+/* aviso de instalação (PWA) */
+.instalar{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:var(--surface,#fff);color:var(--ink,#12233D);border:1px solid var(--line,#d9e3e8);box-shadow:0 8px 30px rgba(18,35,61,.18);font-size:14px}
+.instalar .r{display:flex;gap:8px;margin-left:auto}

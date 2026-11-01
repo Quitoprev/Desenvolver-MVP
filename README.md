@@ -116,7 +116,9 @@ Na ficha do paciente, o botão **Prontuário** abre o registro clínico da terap
 - **Habilidades:** o que a criança já faz, o que está emergindo, o que ainda não faz.
 - **Objetivos terapêuticos:** metas do período.
 
-**Gerar relatório (Word)** monta um .docx com logo e nome da clínica, identificação do paciente, terapia e profissional, o período escolhido, anamnese e avaliação, habilidades, objetivos, frequência (sessões, presenças, faltas) e todas as evoluções do período, mais o parecer que a profissional escreve na hora e a linha de assinatura. Dá para escolher o tipo (evolução, avaliação, escola, convênio) e o que incluir. O arquivo abre no Word para revisar e assinar e, se "Guardar no prontuário" estiver marcado, fica salvo na lista de **Documentos** do paciente.
+**Metas e habilidades (nota de 1 a 5).** Abaixo dos campos de texto, a profissional cadastra as habilidades que a terapia trabalha (ex.: "aumento de vocabulário expressivo", "registro no sistema tátil"), cada uma numa **área** comum a todas as especialidades: Comunicação e linguagem, Cognição e aprendizagem, Socialização e engajamento, Emocional e autorregulação, Integração sensorial, Motora, Autonomia (AVDs). Em **Avaliar agora** ela dá nota de 1 a 5 a todas as metas de uma vez, com a data (1 não apresenta · 2 emergente · 3 com ajuda · 4 com pouca ajuda · 5 consolidada). O app desenha o **gráfico de evolução** de cada meta ao longo das avaliações, e a lista mostra a sequência de notas (2 → 3 → 4). Metas encerradas saem do gráfico mas ficam no histórico. Quando a criança tem mais de uma terapia, a **Visão geral da criança** (dona) junta tudo por área: média da primeira e da última nota, com quais terapias contribuem — é a visão multidisciplinar.
+
+**Gerar relatório (Word)** monta um .docx com logo e nome da clínica, identificação do paciente, terapia e profissional, o período escolhido, anamnese e avaliação, habilidades, objetivos, frequência (sessões, presenças, faltas), a tabela de metas com primeira e última nota, e todas as evoluções do período, mais o parecer que a profissional escreve na hora e a linha de assinatura. Dá para escolher o tipo (evolução, avaliação, escola, convênio) e o que incluir. O arquivo abre no Word para revisar e assinar e, se "Guardar no prontuário" estiver marcado, fica salvo na lista de **Documentos** do paciente.
 
 **Anexar arquivo** guarda laudos, protocolos preenchidos, encaminhamentos e relatórios antigos (PDF, Word, imagem, planilha, até 25 MB) na mesma lista. Os arquivos ficam num espaço privado do Supabase (bucket `documentos`); "Abrir" gera um link que vale cinco minutos. Quem anexou, ou a dona, pode apagar.
 
@@ -139,10 +141,26 @@ A aba **Jogos** (dona e profissionais) tem dez atividades para usar no tablet co
 
 No fim da rodada, "Registrar na evolução" anota acertos, tentativas e tempo (ou os pedidos feitos, no "Eu quero") na evolução da sessão de hoje da criança escolhida. "Tela cheia" esconde o resto do app.
 
+## App no celular
+
+O Rythmos é um **PWA** (app web instalável). Não precisa de loja nem de versão separada: o mesmo endereço da Vercel vira app no celular, com ícone na tela inicial e abrindo em tela cheia, sem a barra do navegador. Os dados continuam vindo do Supabase ao vivo; só a "casca" do app fica guardada no aparelho para abrir rápido.
+
+**Como cada pessoa instala (uma vez, leva 20 segundos):**
+- **Android (Chrome):** ao abrir o endereço, o próprio app mostra o aviso "Instalar". Se não aparecer, menu ⋮ → **Instalar aplicativo** (ou "Adicionar à tela inicial").
+- **iPhone (Safari):** o app mostra a dica; é tocar em **Compartilhar** (quadrado com seta) → **Adicionar à Tela de Início**. No iPhone só funciona pelo Safari.
+- **Computador (Chrome/Edge):** ícone de instalar na barra de endereço.
+
+Quem já instalou recebe as atualizações sozinho: na próxima vez que abrir com internet, o app baixa a versão nova do GitHub/Vercel.
+
+**Se quiser colocar na Play Store** (opcional, para a clínica achar na loja): o [PWABuilder](https://www.pwabuilder.com) gera o pacote Android a partir do endereço do app, e a conta de desenvolvedor Google custa US$ 25 uma vez. Na App Store da Apple é mais caro (US$ 99/ano) e exige um projeto nativo; para clínicas, a instalação pelo Safari resolve.
+
+Arquivos envolvidos: `manifest.json` (nome, cores e ícones), `sw.js` (cache da casca do app), `icons/` (ícones gerados a partir do símbolo do Rythmos) e as tags no `index.html`.
+
 ## Arquivos
 
 - `index.html`, `styles.css`, `app.js`, `jogos.js`, `prontuario.js`: o app. Roda direto no navegador, sem etapa de build.
 - `config.js`: endereço e chave pública do Supabase.
+- `manifest.json`, `sw.js`, `icons/`: o que faz o app ser instalável no celular.
 - `supabase/schema.sql`: tabelas, regras de acesso e funções. Pode ser rodado de novo para atualizar, sem perder dados.
 - `supabase/functions/nfse/index.ts`: função que emite, consulta e cancela a NFS-e (roda no Supabase).
 - `supabase/functions/reunioes/index.ts`: função que transcreve gravações e gera atas (roda no Supabase).
