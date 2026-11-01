@@ -1,15 +1,15 @@
-/* Rythmos — app de uma coluna, cabeçalho fixo com abas. Marinho da marca, menta como acento, gelo nos fundos. */
+/* Rythmos — app de uma coluna, cabeçalho fixo com abas. Azul do autismo como base, dourado (Au, neurodiversidade) como acento, azul-claro nos fundos. */
 :root{
-  --bg:#EEF6F8; --surface:#FFFFFF; --sunk:#E2EDF1; --ink:#12233D; --muted:#475569; --line:#D6E2E8;
-  --accent:#12233D; --accent-ink:#FFFFFF; --glow:#5CC8A8; --glow-soft:#DDF3EC;
+  --bg:#EEF3FB; --surface:#FFFFFF; --sunk:#E1EAF6; --ink:#14213D; --muted:#4B5A73; --line:#D3DDEC;
+  --accent:#1E4FA3; --accent-ink:#FFFFFF; --glow:#F2B233; --glow-soft:#FDF1D3;
   --ok:#1F7A62; --ok-bg:#E3F5EF; --warn:#92400E; --warn-bg:#FEF3C7; --bad:#B42318; --bad-bg:#FDECEA; --info:#2C5A9E; --info-bg:#E8EDF5;
   --display:"Manrope","Avenir Next","Segoe UI",system-ui,sans-serif;
   --body:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
   --r:14px; color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
-  --bg:#0C1527; --surface:#12233D; --sunk:#1A2D4A; --ink:#E8EEF5; --muted:#9AAABE; --line:#243A58;
-  --accent:#5CC8A8; --accent-ink:#06211A; --glow:#5CC8A8; --glow-soft:#173A32;
+  --bg:#0B1630; --surface:#14213D; --sunk:#1C2E52; --ink:#E8EEF8; --muted:#9FAEC6; --line:#28406A;
+  --accent:#F2B233; --accent-ink:#1A1300; --glow:#F2B233; --glow-soft:#3B2E0E;
   --ok:#5CCB8E; --ok-bg:#163224; --warn:#E8B45A; --warn-bg:#382B14; --bad:#F2857B; --bad-bg:#3A1E1C; --info:#8FB0F0; --info-bg:#1C2B4A;
   color-scheme:dark}}
 *{box-sizing:border-box}
@@ -243,3 +243,46 @@ form{display:flex;flex-direction:column;gap:14px;margin:0}
 /* aviso de instalação (PWA) */
 .instalar{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:var(--surface,#fff);color:var(--ink,#12233D);border:1px solid var(--line,#d9e3e8);box-shadow:0 8px 30px rgba(18,35,61,.18);font-size:14px}
 .instalar .r{display:flex;gap:8px;margin-left:auto}
+
+/* agenda inteligente */
+.agLeg{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.agLeg span{display:inline-flex;align-items:center;gap:5px}.agLeg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.agEsp{grid-column:1/-1;margin-top:2px}
+.agSem{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:12px}
+.agCol{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.agCol.hoje{border-color:var(--glow)}
+.agColHead{border:0;background:none;display:flex;align-items:baseline;gap:6px;padding:4px 4px 6px;cursor:pointer;font:inherit;color:var(--ink);border-bottom:1px solid var(--line)}
+.agColHead span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.agColHead b{font-family:var(--display);font-size:18px}.agColHead em{font-style:normal;margin-left:auto;font-size:11px;color:var(--muted)}
+.agCol.hoje .agColHead b{color:var(--ok)}
+.agVazio{color:var(--line);text-align:center;padding:8px 0}
+.agSes{border:0;border-left:3px solid var(--c);background:color-mix(in srgb,var(--c) 10%,var(--surface));border-radius:8px;padding:5px 6px;text-align:left;cursor:pointer;font:inherit;color:var(--ink);display:grid;gap:1px;min-width:0}
+.agSes .t{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}.agSes .n{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.agSes .p{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agSes.st-falta{opacity:.75;text-decoration:line-through}.agSes.st-presente .t::after{content:" ✓";color:var(--ok)}.agSes.st-confirmada .t::after{content:" ✓";color:var(--info)}.agSes.st-desmarcada{opacity:.4;text-decoration:line-through}
+.agMes{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px}
+.agMesHead{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:center;padding-bottom:6px}
+.agMesGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.agMesDia{border:1px solid var(--line);border-radius:8px;min-height:64px;padding:5px;background:var(--surface);text-align:left;cursor:pointer;font:inherit;color:var(--ink);display:flex;flex-direction:column;gap:2px;min-width:0}
+.agMesDia.vazio{border-color:transparent;background:none;cursor:default}.agMesDia.livre{color:var(--muted)}.agMesDia.hoje{border-color:var(--glow);background:var(--glow-soft)}
+.agMesDia b{font-size:13px}.agMesDia .q{font-family:var(--display);font-size:16px;font-weight:700;line-height:1}
+.agMesDia .dots{display:flex;gap:2px;flex-wrap:wrap}.agMesDia .dots i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.agMesDia .f{font-size:10px;color:var(--bad);font-weight:600}.agMesDia .c{font-size:10px;color:var(--warn);font-weight:600}
+@media (max-width:720px){
+  .agSem{grid-template-columns:1fr;gap:8px}.agCol{flex-direction:row;flex-wrap:wrap;align-items:flex-start}.agColHead{flex:0 0 100%;border-bottom:1px solid var(--line)}.agSes{flex:1 1 140px}.agVazio{padding:4px 8px}
+  .agMesDia{min-height:52px;padding:3px}.agMesDia .f,.agMesDia .c{display:none}
+}
+
+/* protocolos de avaliação */
+.prCat{border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--surface)}
+.prCat>summary{cursor:pointer;font-weight:700;font-size:14px}
+.prArea{border-top:1px solid var(--line);padding:6px 0}
+.prArea>summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--muted);padding:4px 0}
+.prProt{padding:6px 0 6px 4px}
+.prProtL{display:flex!important;justify-content:flex-start;gap:8px;align-items:flex-start;font-size:14px;font-weight:500!important;color:var(--ink)!important;text-transform:none!important;letter-spacing:0!important;cursor:pointer;margin:0!important}
+.prProtL span{flex:1;text-align:left}
+.prProtL input{flex:none;width:auto!important}
+.prProtL input{margin-top:3px}
+.prProtF{display:none;grid-template-columns:150px 1fr;gap:6px;margin:6px 0 0 24px}
+.prProt.on .prProtF,.prProt.novo .prProtF{display:grid}
+.prProtF input,.prProt.novo>input{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:inherit;font-size:14px;background:var(--bg);color:var(--ink);min-width:0;width:100%}
+.prProt.novo>input{margin-top:4px}
+@media (max-width:520px){.prProtF{grid-template-columns:1fr;margin-left:0}}

@@ -192,6 +192,65 @@ create table if not exists public.reunioes (
 );
 create index if not exists reunioes_clinica_idx on public.reunioes(clinica_id, data desc);
 
+-- ---------- prontuário e documentos ----------
+-- Prontuário: um por terapia (vínculo). Anamnese, avaliação, habilidades e
+-- objetivos em texto livre, escritos pela profissional que atende.
+create table if not exists public.prontuarios (
+  vinculo_id uuid primary key references public.vinculos(id) on delete cascade,
+  clinica_id uuid not null references public.clinicas(id) on delete cascade,
+  paciente_id uuid not null references public.pacientes(id) on delete cascade,
+  profissional_id uuid references public.membros(user_id) on delete set null,
+  anamnese text,
+  avaliacao text,
+  habilidades text,
+  objetivos text,
+  protocolos jsonb not null default '[]'::jsonb,
+  atualizado_em timestamptz not null default now()
+);
+alter table public.prontuarios add column if not exists protocolos jsonb not null default '[]'::jsonb;
+-- Documentos do paciente (relatórios gerados, laudos, Word, PDF): o arquivo
+-- fica no bucket 'documentos', em <clinica>/<paciente>/<arquivo>.
+create table if not exists public.documentos (
+  id uuid primary key default gen_random_uuid(),
+  clinica_id uuid not null references public.clinicas(id) on delete cascade,
+  paciente_id uuid not null references public.pacientes(id) on delete cascade,
+  profissional_id uuid references public.membros(user_id) on delete set null,
+  nome text not null,
+  tipo text,
+  tamanho integer,
+  caminho text not null,
+  criado_em timestamptz not null default now()
+);
+create index if not exists documentos_paciente_idx on public.documentos(paciente_id, criado_em desc);
+-- Metas/habilidades da terapia, com nota de 1 a 5 a cada avaliação (gráfico de evolução).
+-- 'area' é comum a todas as especialidades, para a visão geral da criança.
+create table if not exists public.metas (
+  id uuid primary key default gen_random_uuid(),
+  clinica_id uuid not null references public.clinicas(id) on delete cascade,
+  vinculo_id uuid not null references public.vinculos(id) on delete cascade,
+  paciente_id uuid not null references public.pacientes(id) on delete cascade,
+  profissional_id uuid references public.membros(user_id) on delete set null,
+  area text not null default 'comunicacao',
+  descricao text not null,
+  ativa boolean not null default true,
+  ordem integer not null default 0,
+  criado_em timestamptz not null default now()
+);
+create table if not exists public.metas_notas (
+  id uuid primary key default gen_random_uuid(),
+  clinica_id uuid not null references public.clinicas(id) on delete cascade,
+  meta_id uuid not null references public.metas(id) on delete cascade,
+  vinculo_id uuid not null references public.vinculos(id) on delete cascade,
+  paciente_id uuid not null references public.pacientes(id) on delete cascade,
+  profissional_id uuid references public.membros(user_id) on delete set null,
+  data date not null default current_date,
+  nota smallint not null check (nota between 1 and 5),
+  obs text,
+  unique (meta_id, data)
+);
+create index if not exists metas_vinculo_idx on public.metas(vinculo_id);
+create index if not exists metas_notas_paciente_idx on public.metas_notas(paciente_id, data);
+
 create index if not exists membros_clinica_idx on public.membros(clinica_id);
 create index if not exists pacientes_clinica_idx on public.pacientes(clinica_id);
 create index if not exists vinculos_paciente_idx on public.vinculos(paciente_id);
@@ -403,6 +462,62 @@ drop trigger if exists reunioes_bi on public.reunioes;
 create trigger reunioes_bi before insert or update on public.reunioes
   for each row execute function public.tg_reunioes();
 
+create or replace function public.tg_prontuarios() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v vinculos%rowtype;
+begin
+  select * into v from vinculos where id = new.vinculo_id;
+  if v.id is null or v.clinica_id is distinct from public.minha_clinica() then
+    raise exception 'Terapia não encontrada nesta clínica';
+  end if;
+  new.clinica_id := v.clinica_id; new.paciente_id := v.paciente_id; new.profissional_id := v.profissional_id;
+  new.atualizado_em := now();
+  return new;
+end $$;
+drop trigger if exists prontuarios_bi on public.prontuarios;
+create trigger prontuarios_bi before insert or update on public.prontuarios
+  for each row execute function public.tg_prontuarios();
+
+create or replace function public.tg_documentos() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  new.clinica_id := public.minha_clinica();
+  new.profissional_id := auth.uid();
+  if not public.paciente_da_clinica(new.paciente_id) then raise exception 'Paciente não encontrado nesta clínica'; end if;
+  return new;
+end $$;
+create or replace function public.tg_metas() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v vinculos%rowtype;
+begin
+  select * into v from vinculos where id = new.vinculo_id;
+  if v.id is null or v.clinica_id is distinct from public.minha_clinica() then
+    raise exception 'Terapia não encontrada nesta clínica';
+  end if;
+  new.clinica_id := v.clinica_id; new.paciente_id := v.paciente_id; new.profissional_id := v.profissional_id;
+  return new;
+end $$;
+drop trigger if exists metas_bi on public.metas;
+create trigger metas_bi before insert or update on public.metas
+  for each row execute function public.tg_metas();
+create or replace function public.tg_metas_notas() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare m metas%rowtype;
+begin
+  select * into m from metas where id = new.meta_id;
+  if m.id is null or m.clinica_id is distinct from public.minha_clinica() then
+    raise exception 'Meta não encontrada nesta clínica';
+  end if;
+  new.clinica_id := m.clinica_id; new.vinculo_id := m.vinculo_id; new.paciente_id := m.paciente_id; new.profissional_id := m.profissional_id;
+  return new;
+end $$;
+drop trigger if exists metas_notas_bi on public.metas_notas;
+create trigger metas_notas_bi before insert or update on public.metas_notas
+  for each row execute function public.tg_metas_notas();
+drop trigger if exists documentos_bi on public.documentos;
+create trigger documentos_bi before insert on public.documentos
+  for each row execute function public.tg_documentos();
+
 drop trigger if exists ciclos_bi on public.unimed_ciclos;
 create trigger ciclos_bi before insert or update on public.unimed_ciclos
   for each row execute function public.tg_ciclos();
@@ -418,10 +533,14 @@ alter table public.pagamentos enable row level security;
 alter table public.unimed_ciclos enable row level security;
 alter table public.notas_fiscais enable row level security;
 alter table public.reunioes enable row level security;
+alter table public.prontuarios enable row level security;
+alter table public.documentos enable row level security;
+alter table public.metas enable row level security;
+alter table public.metas_notas enable row level security;
 
 do $$ declare r record; begin
   for r in select policyname, tablename from pg_policies where schemaname = 'public'
-    and tablename in ('clinicas','membros','pacientes','vinculos','sessoes','evolucoes','pagamentos','unimed_ciclos','notas_fiscais','reunioes')
+    and tablename in ('clinicas','membros','pacientes','vinculos','sessoes','evolucoes','pagamentos','unimed_ciclos','notas_fiscais','reunioes','prontuarios','documentos','metas','metas_notas')
   loop execute format('drop policy %I on public.%I', r.policyname, r.tablename); end loop;
 end $$;
 
@@ -519,6 +638,25 @@ create policy notas_apagar on public.notas_fiscais for delete to authenticated
 create policy reunioes_tudo on public.reunioes for all to authenticated
   using (clinica_id = public.minha_clinica() and public.eh_dona())
   with check (clinica_id = public.minha_clinica() and public.eh_dona());
+
+-- prontuário: dona tudo; profissional só os das terapias dela; recepção nada
+create policy prontuarios_tudo on public.prontuarios for all to authenticated
+  using (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()))
+  with check (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()));
+-- metas e notas: mesma regra do prontuário
+create policy metas_tudo on public.metas for all to authenticated
+  using (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()))
+  with check (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()));
+create policy metas_notas_tudo on public.metas_notas for all to authenticated
+  using (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()))
+  with check (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()));
+-- documentos: dona tudo; profissional vê os dos pacientes que atende e apaga só os que enviou
+create policy documentos_ver on public.documentos for select to authenticated
+  using (clinica_id = public.minha_clinica() and (public.eh_dona() or public.atende(paciente_id)));
+create policy documentos_criar on public.documentos for insert to authenticated
+  with check (clinica_id = public.minha_clinica() and (public.eh_dona() or public.atende(paciente_id)));
+create policy documentos_apagar on public.documentos for delete to authenticated
+  using (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()));
 
 -- ---------- ações especiais ----------
 -- Quem cria a clínica vira dona.
@@ -659,11 +797,13 @@ grant execute on function public.apagar_exemplos() to authenticated;
 
 grant select, insert, update, delete on
   public.clinicas, public.membros, public.pacientes, public.vinculos, public.sessoes,
-  public.evolucoes, public.pagamentos, public.unimed_ciclos, public.notas_fiscais, public.reunioes
+  public.evolucoes, public.pagamentos, public.unimed_ciclos, public.notas_fiscais, public.reunioes,
+  public.prontuarios, public.documentos, public.metas, public.metas_notas
   to authenticated;
 revoke all on
   public.clinicas, public.membros, public.pacientes, public.vinculos, public.sessoes,
-  public.evolucoes, public.pagamentos, public.unimed_ciclos, public.notas_fiscais, public.reunioes
+  public.evolucoes, public.pagamentos, public.unimed_ciclos, public.notas_fiscais, public.reunioes,
+  public.prontuarios, public.documentos, public.metas, public.metas_notas
   from anon;
 
 -- ---------- bucket de áudio das reuniões (Supabase Storage) ----------
@@ -682,5 +822,21 @@ do $$ begin
       using (bucket_id = 'reunioes' and public.eh_dona() and (storage.foldername(name))[1] = public.minha_clinica()::text);
     create policy reunioes_apagar on storage.objects for delete to authenticated
       using (bucket_id = 'reunioes' and public.eh_dona() and (storage.foldername(name))[1] = public.minha_clinica()::text);
+    -- documentos dos pacientes: <clinica>/<paciente>/<arquivo>
+    insert into storage.buckets (id, name, public, file_size_limit)
+      values ('documentos', 'documentos', false, 26214400)
+      on conflict (id) do update set public = false, file_size_limit = 26214400;
+    drop policy if exists documentos_upload on storage.objects;
+    drop policy if exists documentos_ler on storage.objects;
+    drop policy if exists documentos_apagar on storage.objects;
+    create policy documentos_upload on storage.objects for insert to authenticated
+      with check (bucket_id = 'documentos' and (storage.foldername(name))[1] = public.minha_clinica()::text
+        and (public.eh_dona() or public.atende(((storage.foldername(name))[2])::uuid)));
+    create policy documentos_ler on storage.objects for select to authenticated
+      using (bucket_id = 'documentos' and (storage.foldername(name))[1] = public.minha_clinica()::text
+        and (public.eh_dona() or public.atende(((storage.foldername(name))[2])::uuid)));
+    create policy documentos_apagar on storage.objects for delete to authenticated
+      using (bucket_id = 'documentos' and (storage.foldername(name))[1] = public.minha_clinica()::text
+        and (public.eh_dona() or owner = auth.uid()));
   end if;
 end $$;

@@ -1,7 +1,7 @@
 /* Rythmos — service worker. Guarda só a "casca" do app (html, css, js, ícones)
    para abrir rápido e instalar como app. Dados do Supabase nunca passam por aqui. */
-const VERSAO = "rythmos-v1";
-const ARQUIVOS = ["./", "./index.html", "./styles.css", "./app.js", "./jogos.js", "./prontuario.js", "./config.js", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
+const VERSAO = "rythmos-v3";
+const ARQUIVOS = ["./", "./index.html", "./styles.css", "./app.js", "./jogos.js", "./prontuario.js", "./painel.js", "./agenda.js", "./config.js", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSAO).then(c => c.addAll(ARQUIVOS)).then(() => self.skipWaiting()));

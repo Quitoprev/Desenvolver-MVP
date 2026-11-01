@@ -10,7 +10,7 @@ const funcaoDe=m=>m.papel==="recepcao"?"Recepcionista":(m.especialidade||"");
 const selFuncao=(id,name,v,extra)=>`<select id="${id}" name="${name}" ${extra||""}><option value="">Escolha…</option>${FUNCOES.map(f=>`<option ${f===v?"selected":""}>${f}</option>`).join("")}</select>`;
 const STATUS = {agendada:"Agendada",confirmada:"Confirmada",presente:"Presente",falta:"Falta",desmarcada:"Desmarcada"};
 const SITUACAO = {ativo:"Ativo",fila:"Na fila",pausado:"Pausado",alta:"Alta"};
-const PAPEL = {dona:"Dona da clínica",recepcao:"Recepção",profissional:"Profissional"};
+const PAPEL = {dona:"Gestora",recepcao:"Recepção",profissional:"Profissional"};
 const FORMAS = ["Pix","Dinheiro","Cartão de débito","Cartão de crédito","Transferência"];
 const DEF = {
   confirmacao:"Olá, {responsavel}! Aqui é da {clinica}. Passando para confirmar a sessão de {paciente} em {data}, às {hora}, com {terapeuta}. Podemos confirmar? Responda SIM ou NÃO, por favor.",
@@ -168,12 +168,12 @@ function telaOnboarding(){
   gate(`<div style="display:flex;flex-direction:column;gap:16px;align-items:center;width:100%">
   <div class="card" style="max-width:820px">${gateBrand()}<div><h2>Bem-vinda ao Rythmos</h2><p class="note">Sua conta (${esc(S.user.email)}) ainda não está em nenhuma clínica.</p></div></div>
   <div class="cards2">
-    <form class="card" id="fEntrar"><h2>Entrar na clínica</h2><p class="note">Para profissionais e recepção. Peça o código à dona da clínica.</p>
+    <form class="card" id="fEntrar"><h2>Entrar na clínica</h2><p class="note">Para profissionais e recepção. Peça o código à gestora da clínica.</p>
       <div class="f"><label for="o_cod">Código da clínica</label><input id="o_cod" name="codigo" required autocapitalize="characters" maxlength="12" style="text-transform:uppercase;letter-spacing:.15em"></div>
       <div class="f"><label for="o_nome1">Seu nome</label><input id="o_nome1" name="nome" required placeholder="Como aparece na agenda"></div>
       <div class="f"><label for="o_func">Sua função</label>${selFuncao("o_func","funcao","","required")}</div>
       <button class="btn primary big" type="submit">Pedir acesso</button></form>
-    <form class="card" id="fCriar"><h2>Cadastrar minha clínica</h2><p class="note">Para a dona ou gestora. Você controla quem entra e o que cada um vê.</p>
+    <form class="card" id="fCriar"><h2>Cadastrar minha clínica</h2><p class="note">Para quem administra a clínica. Você controla quem entra e o que cada um vê.</p>
       <div class="f"><label for="o_cli">Nome da clínica</label><input id="o_cli" name="clinica" required></div>
       <div class="f"><label for="o_nome2">Seu nome</label><input id="o_nome2" name="nome" required></div>
       <button class="btn big" type="submit">Cadastrar clínica</button></form>
@@ -186,7 +186,7 @@ function telaOnboarding(){
 
 function telaAguardando(){
   gate(`<div class="card">${gateBrand()}<h2>Aguardando aprovação</h2>
-  <p>Seu pedido para entrar na <b>${esc(S.me.clinica)}</b> foi enviado. Assim que a dona da clínica aprovar, sua agenda aparece aqui.</p>
+  <p>Seu pedido para entrar na <b>${esc(S.me.clinica)}</b> foi enviado. Assim que a gestora da clínica aprovar, sua agenda aparece aqui.</p>
   <div class="toolbar"><button class="btn primary" id="gAtual">Verificar de novo</button><button class="btn" id="gSair">Sair</button></div></div>`);
   $("gAtual").onclick=iniciar;$("gSair").onclick=sair;
 }
@@ -215,7 +215,7 @@ async function iniciar2(){
 function tabs(){
   const t=[["agenda","Agenda"],["confirmacoes","Confirmações"],["pacientes","Pacientes"],["fila","Fila"],["unimed","Unimed"]];
   if(canCaixa())t.push(["caixa","Caixa"],["fiscal","Fiscal"]);
-  if(isDona())t.push(["reunioes","Reuniões"]);
+  if(isDona())t.push(["painel","Painel"],["reunioes","Reuniões"]);
   if(canCaixa())t.push(["jogos","Jogos"]);
   return t;
 }
@@ -232,7 +232,7 @@ function render(){
   fab.hidden=!fl||!S.loaded;fab.textContent=fl||"";
   let h="";
   if(!S.loaded)h='<div class="empty"><span>Carregando…</span></div>';
-  else h=({agenda:vAgenda,pacientes:vPacientes,fila:vFila,unimed:vUnimed,caixa:vCaixa,fiscal:vFiscal,reunioes:vReunioes,confirmacoes:vConfirmacoes,jogos:vJogos}[S.tab]||vAgenda)();
+  else h=({agenda:vAgenda,pacientes:vPacientes,fila:vFila,unimed:vUnimed,caixa:vCaixa,fiscal:vFiscal,reunioes:vReunioes,confirmacoes:vConfirmacoes,jogos:vJogos,painel:typeof vPainel==="function"?vPainel:vAgenda}[S.tab]||vAgenda)();
   $("view").innerHTML=h;
 }
 function filtroProf(opts){
@@ -256,11 +256,13 @@ function minhasPendencias(){
   return S.ses.filter(s=>s.profissional_id===meuId()&&s.status==="presente"&&s.data<=hoje()&&s.data>=lim&&!S.evo[s.id]).sort((a,b)=>(b.data+b.hora).localeCompare(a.data+a.hora));
 }
 function vAgenda(){
+  if(typeof AG!=="undefined"&&AG.vista==="semana")return vAgendaSemana();
+  if(typeof AG!=="undefined"&&AG.vista==="mes")return vAgendaMes();
   const d=S.dia,isHoje=d===hoje();
   const ss=sesVisiveis().filter(s=>s.data===d).sort((a,b)=>String(a.hora).localeCompare(String(b.hora)));
   const n=k=>ss.filter(s=>s.status===k).length;
   const rot=isHoje?"Hoje":d===addDays(hoje(),1)?"Amanhã":d===addDays(hoje(),-1)?"Ontem":"Agenda";
-  let h=filtroProf()+daynav(rot,"dia",fmtLongo(d),isHoje,"hoje");
+  let h=filtroProf()+(typeof agSubtabs==="function"?agSubtabs():"")+daynav(rot,"dia",fmtLongo(d),isHoje,"hoje");
   if(isHoje)h+=bannerUnimed();
   h+=`<div class="stats"><div class="stat"><b>${ss.filter(s=>s.status!=="desmarcada").length}</b><span>sessões</span></div>
     <div class="stat ${n("agendada")?"hl":""}"><b>${n("agendada")}</b><span>a confirmar</span></div>
@@ -276,7 +278,7 @@ function vAgenda(){
     for(const s of ss){
       const p=pacById(s.paciente_id)||{nome:"Paciente"},v=vinById(s.vinculo_id);
       const passou=s.data<=hoje(),pode=podeEditarSessao(s),link=waLink(p.telefone,msgConfirmacao(s));
-      h+=`<div class="row ${s.status==="desmarcada"?"dim":""}">
+      h+=`<div class="row ${s.status==="desmarcada"?"dim":""}" style="box-shadow:inset 4px 0 0 ${typeof corTerapia==="function"?corTerapia(s.terapia):"transparent"}">
         <div class="time">${hhmm(s.hora)}</div>
         <div class="who" data-act="editSes" data-id="${s.id}"><div class="name">${esc(p.nome)}${p.exemplo?'<span class="ex">exemplo</span>':""}${v?uniPill(v,s):""}</div>
           <div class="sub">${esc([s.terapia,mostrarProf?nomeProf(s.profissional_id):""].filter(Boolean).join(" · "))}${S.evo[s.id]?" · evolução registrada":""}</div></div>
@@ -1198,14 +1200,14 @@ function sheetMembro(uid){
   openSheet(`<form id="fMem"><header><h2>${esc(m.nome)}</h2><button type="button" class="iconbtn" data-act="clinSub" data-v="equipe">Voltar</button></header>
   <div class="fields">
     <div class="f full"><label for="m_nome">Nome</label><input id="m_nome" name="nome" required value="${esc(m.nome)}"></div>
-    <div class="f"><label for="m_func">Função</label>${eu?`<input id="m_func" value="Dona da clínica" disabled>`:selFuncao("m_func","funcao",funcaoDe(m),"required")}</div>
+    <div class="f"><label for="m_func">Função</label>${eu?`<input id="m_func" value="Gestora da clínica" disabled>`:selFuncao("m_func","funcao",funcaoDe(m),"required")}</div>
     <div class="f"><label for="m_rep">Repasse à clínica (%)</label><input id="m_rep" name="repasse_pct" type="number" min="0" max="100" step="0.5" value="${esc(m.repasse_pct)}"></div>
     <div class="f full"><div class="eyebrow">Fiscal</div></div>
     <div class="f"><label for="m_rec">Quem recebe as sessões particulares</label><select id="m_rec" name="recebe"><option value="clinica" ${m.recebe!=="pf"?"selected":""}>A clínica (emite NFS-e)</option><option value="pf" ${m.recebe==="pf"?"selected":""}>A própria profissional (Receita Saúde)</option></select></div>
     <div class="f"><label for="m_cpf">CPF</label><input id="m_cpf" name="cpf" inputmode="numeric" value="${esc(cpfFmt(m.cpf))}"></div>
     <div class="f"><label for="m_reg">Registro no conselho</label><input id="m_reg" name="registro" placeholder="CRFa 4-12345" value="${esc(m.registro||"")}"></div>
   </div>
-  <p class="note">A dona vê tudo, inclusive o caixa e as evoluções de todas. A recepção vê agenda, confirmações, pacientes, fila e Unimed da clínica inteira, sem caixa, fiscal, evoluções e reuniões. Cada profissional vê só os próprios pacientes: terapias, agenda, evoluções, fila, Unimed e o caixa dela.</p>
+  <p class="note">A gestora vê tudo, inclusive o caixa e as evoluções de todas. A recepção vê agenda, confirmações, pacientes, fila e Unimed da clínica inteira, sem caixa, fiscal, evoluções e reuniões. Cada profissional vê só os próprios pacientes: terapias, agenda, evoluções, fila, Unimed e o caixa dela.</p>
   <div class="foot">${eu?"":`<button type="button" class="btn danger" data-act="remover" data-id="${uid}">Remover da clínica</button>`}<div class="r"><button class="btn primary" type="submit">Salvar</button></div></div>${datalists()}</form>`);
   $("fMem").onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
     const cpfD=String(d.cpf||"").replace(/\D/g,"");if(cpfD&&!cpfValido(cpfD))return toast("CPF inválido");
@@ -1314,6 +1316,8 @@ document.addEventListener("click",e=>{
   const t=e.target.closest("[data-act]");if(!t)return;
   if(t.dataset.act.startsWith("jg")&&typeof jgAcao==="function"&&jgAcao(t.dataset.act,t))return;
   if(/^(pr[A-Z]|abrirPront)/.test(t.dataset.act)&&typeof prAcao==="function"&&prAcao(t.dataset.act,t))return;
+  if(/^pn[A-Z]/.test(t.dataset.act)&&typeof pnAcao==="function"&&pnAcao(t.dataset.act,t))return;
+  if(/^ag[A-Z]/.test(t.dataset.act)&&typeof agAcao==="function"&&agAcao(t.dataset.act,t))return;
   acao(t.dataset.act,t);
 });
 document.addEventListener("change",e=>{

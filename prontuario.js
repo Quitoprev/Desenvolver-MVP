@@ -4,6 +4,16 @@
 
 const PR = { pid:null, vid:null, dados:{}, docs:[], metas:[], notas:[], geral:false, libOk:false };
 const AREAS = {comunicacao:"Comunicação e linguagem",cognicao:"Cognição e aprendizagem",social:"Socialização e engajamento",emocional:"Emocional e autorregulação",sensorial:"Integração sensorial",motora:"Motora",autonomia:"Autonomia (AVDs)",outra:"Outra"};
+const PROTOCOLOS = [
+  ["Fonoaudiologia",["ABFW – Teste de Linguagem Infantil","PROC – Protocolo de Observação Comportamental","TVIP – Teste de Vocabulário por Imagens Peabody","MBGR – Avaliação Miofuncional Orofacial","CONFIAS – Consciência Fonológica","Avaliação audiológica / audiometria"]],
+  ["Terapia ocupacional",["Perfil Sensorial 2 (Sensory Profile 2)","SPM – Sensory Processing Measure","PEDI-CAT – Inventário de Avaliação Pediátrica de Incapacidade","COPM – Medida Canadense de Desempenho Ocupacional","Avaliação de AVDs (atividades de vida diária)"]],
+  ["Psicologia e comportamento (ABA)",["VB-MAPP","ABLLS-R","AFLS","PEAK","Vineland-3 – Comportamento Adaptativo","Inventário Portage Operacionalizado","CARS-2","ATEC","SRS-2","CBCL","WISC-V","SON-R"]],
+  ["Psicopedagogia",["TDE-II – Teste de Desempenho Escolar","PROLEC – Avaliação dos Processos de Leitura","Provas Operatórias (Piaget)","EOCA – Entrevista Operativa Centrada na Aprendizagem","Protocolo de Habilidades Cognitivo-Linguísticas (Capovilla)"]],
+  ["Fisioterapia",["GMFM-88 / GMFM-66","AIMS – Alberta Infant Motor Scale","TIMP – Test of Infant Motor Performance","EDM – Escala de Desenvolvimento Motor (Rosa Neto)"]],
+  ["Musicoterapia",["IMTAP – Individualized Music Therapy Assessment Profile","Avaliação musicoterapêutica inicial (ficha própria)"]],
+  ["Nutrição",["BAMBI – Brief Autism Mealtime Behavior Inventory","Recordatório alimentar de 24 h","Avaliação antropométrica (curvas OMS)"]],
+  ["Triagem e desenvolvimento",["M-CHAT-R/F","Denver II – Teste de Triagem do Desenvolvimento","Bayley-III","ADOS-2 (laudo externo)"]],
+];
 const NOTAS = {1:"não apresenta",2:"emergente",3:"com ajuda",4:"com pouca ajuda",5:"consolidada"};
 const PR_CORES = ["#1F7A62","#2F6DB5","#C2410C","#7C3AED","#BE185D","#0E7490","#A16207","#475569"];
 
@@ -15,7 +25,7 @@ function podeProntuario(pid){ return (isDona()||isProf())&&prVinculosVisiveis(pi
 async function sheetProntuario(pid, vid){
   const p=pacById(pid); if(!p) return;
   const vins=prVinculosVisiveis(pid); if(!vins.length) return toast("Você não atende esse paciente.");
-  PR.pid=pid; PR.vid=vid||(vins.find(v=>v.id===PR.vid)?PR.vid:vins[0].id);
+  PR.pid=pid; PR.vid=vid||(vins.find(v=>v.id===PR.vid)?PR.vid:(vins.find(v=>v.profissional_id===meuId()&&v.situacao==="ativo")||vins.find(v=>v.situacao==="ativo")||vins[0]).id);
   openSheet(`<header><h2>Prontuário · ${esc(p.nome)}</h2><button type="button" class="iconbtn" data-act="editPac" data-id="${pid}">Ficha</button></header><div class="empty"><span>Carregando…</span></div>`);
   try{
     const [pr,docs,metas,notas]=await Promise.all([
@@ -36,7 +46,8 @@ function renderProntuario(){
   ${vins.length>1?`<div class="filtro"><label for="pr_vin">Terapia</label><select id="pr_vin" data-change="prVin">${vins.map(x=>`<option value="${x.id}" ${x.id===v.id?"selected":""}>${esc(x.terapia)} · ${esc(x.profissional_id?chamar(nomeProf(x.profissional_id)):"sem profissional")}</option>`).join("")}</select></div>`:`<p class="note">${esc(v.terapia)} · ${esc(nomeProf(v.profissional_id))}</p>`}
   <div class="fields">
     ${F("pr_ana","anamnese","Anamnese","Queixa principal, história do desenvolvimento, saúde, família, escola, o que já foi feito.",d.anamnese)}
-    ${F("pr_ava","avaliacao","Avaliação","Instrumentos e protocolos aplicados (nome, data, resultado), observação clínica, hipótese.",d.avaliacao)}
+    ${F("pr_ava","avaliacao","Avaliação","Observação clínica, hipótese e o que mais não couber nos protocolos abaixo.",d.avaliacao)}
+    <div class="f full">${prProtocolosHtml(d.protocolos||[])}</div>
     ${F("pr_hab","habilidades","Habilidades","O que a criança já faz, o que está emergindo, o que ainda não faz.",d.habilidades)}
     ${F("pr_obj","objetivos","Objetivos terapêuticos","Metas do período, com prazo quando houver.",d.objetivos)}
   </div>
@@ -48,12 +59,32 @@ function renderProntuario(){
   </div></form>`);
   $("fPront").onsubmit=async e=>{
     e.preventDefault(); const f=Object.fromEntries(new FormData(e.target)); const vid=v.id;
-    const body={vinculo_id:vid,anamnese:f.anamnese.trim()||null,avaliacao:f.avaliacao.trim()||null,habilidades:f.habilidades.trim()||null,objetivos:f.objetivos.trim()||null};
+    const body={vinculo_id:vid,anamnese:f.anamnese.trim()||null,avaliacao:f.avaliacao.trim()||null,habilidades:f.habilidades.trim()||null,objetivos:f.objetivos.trim()||null,protocolos:prProtocolosLer(e.target)};
     try{ await run(sb.from("prontuarios").upsert(body,{onConflict:"vinculo_id"})); toast("Prontuário salvo"); sheetProntuario(PR.pid,vid); }catch(err){ fail(err); }
   };
   const fi=$("prFile"); if(fi) fi.onchange=()=>prAnexar(fi.files[0]);
 }
-document.addEventListener("change",e=>{ if(e.target.dataset.change==="prVin"){ PR.vid=e.target.value; renderProntuario(); } });
+document.addEventListener("change",e=>{ if(e.target.dataset.change==="prVin"){ PR.vid=e.target.value; renderProntuario(); }
+  if(e.target.classList.contains("prChk")){ const row=e.target.closest(".prProt"); row.classList.toggle("on",e.target.checked); const dt=row.querySelector("input[type=date]"); if(e.target.checked&&dt&&!dt.value) dt.value=hoje(); } });
+
+/* ---------- protocolos de avaliação ---------- */
+function prProtocolosHtml(sel){
+  const byNome=Object.fromEntries(sel.map(p=>[p.nome,p]));
+  const conhecidos=new Set(PROTOCOLOS.flatMap(([,l])=>l));
+  const outros=sel.filter(p=>!conhecidos.has(p.nome));
+  const linha=(nome,area,i)=>{const p=byNome[nome];return `<div class="prProt ${p?"on":""}"><label class="prProtL"><input type="checkbox" class="prChk" name="pc_${i}" value="${esc(nome)}" ${p?"checked":""}><span>${esc(nome)}</span></label><input type="hidden" name="pa_${i}" value="${esc(area)}"><div class="prProtF"><input type="date" name="pd_${i}" value="${esc(p&&p.data||"")}" aria-label="Data"><input name="pr_${i}" placeholder="Resultado / escore / observação" value="${esc(p&&p.resultado||"")}"></div></div>`};
+  let i=0, h=`<details class="prCat" ${sel.length?"open":""}><summary>Protocolos e testes aplicados <span class="note">· ${sel.length?sel.length+(sel.length===1?" marcado":" marcados"):"marque os que usou"}</span></summary>`;
+  for(const [area,lista] of PROTOCOLOS){ const n=lista.filter(x=>byNome[x]).length; h+=`<details class="prArea" ${n?"open":""}><summary>${esc(area)}${n?` <span class="pill p-ok">${n}</span>`:""}</summary>${lista.map(x=>linha(x,area,i++)).join("")}</details>`; }
+  h+=`<details class="prArea" ${outros.length?"open":""}><summary>Outros${outros.length?` <span class="pill p-ok">${outros.length}</span>`:""}</summary>${outros.map(p=>linha(p.nome,"Outro",i++)).join("")}
+    <div class="prProt novo"><input name="po_nome" placeholder="Outro protocolo (nome)" aria-label="Outro protocolo"><div class="prProtF"><input type="date" name="po_data" aria-label="Data"><input name="po_res" placeholder="Resultado"></div><span class="note">Preencha e salve o prontuário; o protocolo entra na lista.</span></div></details></details>`;
+  return h;
+}
+function prProtocolosLer(form){
+  const f=new FormData(form), out=[];
+  for(const [k,v] of f.entries()){ if(!k.startsWith("pc_")) continue; const i=k.slice(3); out.push({nome:String(v),area:String(f.get("pa_"+i)||""),data:String(f.get("pd_"+i)||"")||null,resultado:String(f.get("pr_"+i)||"").trim()||null}); }
+  const on=String(f.get("po_nome")||"").trim(); if(on) out.push({nome:on,area:"Outro",data:String(f.get("po_data")||"")||null,resultado:String(f.get("po_res")||"").trim()||null});
+  return out;
+}
 
 async function prAnexar(file, nomeForcado){
   if(!file) return;
@@ -145,6 +176,18 @@ function sheetAvaliar(){
     try{ await run(sb.from("metas_notas").upsert(rows,{onConflict:"meta_id,data"})); toast(`${rows.length} ${rows.length===1?"nota salva":"notas salvas"}`); sheetProntuario(PR.pid,PR.vid); }catch(err){ fail(err); } };
 }
 
+function prGraficoPng(metas){
+  const datas=[...new Set(PR.notas.filter(n=>metas.some(m=>m.id===n.meta_id)).map(n=>n.data))].sort(); if(!datas.length) return null;
+  const W=1120,H=520,L=60,R=30,T=30,B=110,c=document.createElement("canvas");c.width=W;c.height=H;const g=c.getContext("2d");
+  g.fillStyle="#fff";g.fillRect(0,0,W,H);g.font="22px Arial";g.textBaseline="middle";
+  const x=i=>datas.length===1?(L+W-R)/2:L+(W-L-R)*i/(datas.length-1), y=n=>T+(H-T-B)*(5-n)/4;
+  for(let n=1;n<=5;n++){g.strokeStyle="#D9E3E8";g.setLineDash(n===1?[]:[4,6]);g.beginPath();g.moveTo(L,y(n));g.lineTo(W-R,y(n));g.stroke();g.fillStyle="#475569";g.textAlign="right";g.fillText(String(n),L-12,y(n));}
+  g.setLineDash([]);g.textAlign="center";datas.forEach((d,i)=>{if(datas.length<=8||i%Math.ceil(datas.length/8)===0||i===datas.length-1)g.fillText(prMesAno(d),x(i),H-B+28)});
+  metas.forEach((m,k)=>{const col=PR_CORES[k%PR_CORES.length];const pts=prNotasDe(m.id).map(n=>[x(datas.indexOf(n.data)),y(n.nota)]);if(!pts.length)return;g.strokeStyle=col;g.lineWidth=4;g.lineJoin="round";g.beginPath();pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.stroke();g.fillStyle=col;pts.forEach(p=>{g.beginPath();g.arc(p[0],p[1],7,0,7);g.fill()});});
+  let lx=L,ly=H-40;g.textAlign="left";g.font="20px Arial";metas.forEach((m,k)=>{const t=m.descricao.length>34?m.descricao.slice(0,33)+"…":m.descricao;const w=g.measureText(t).width+34;if(lx+w>W-R){lx=L;ly+=28}g.fillStyle=PR_CORES[k%PR_CORES.length];g.fillRect(lx,ly-8,16,16);g.fillStyle="#12233D";g.fillText(t,lx+22,ly);lx+=w;});
+  const b64=c.toDataURL("image/png").split(",")[1];const bin=atob(b64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return arr;
+}
+
 /* ---------- relatório em Word ---------- */
 function prCarregarLib(){
   if(window.docx){ PR.libOk=true; return Promise.resolve(); }
@@ -178,15 +221,22 @@ async function prGerarDocx(f, v){
   const titulos={evolucao:"Relatório de evolução terapêutica",avaliacao:"Relatório de avaliação",escola:"Relatório para a escola",convenio:"Relatório para o convênio"};
   const D=window.docx;
   const P=(t,o)=>new D.Paragraph(Object.assign({children:[new D.TextRun({text:t,font:"Arial",size:22})],spacing:{after:120}},o||{}));
-  const H=(t)=>new D.Paragraph({children:[new D.TextRun({text:t,bold:true,font:"Arial",size:26,color:"12233D"})],spacing:{before:240,after:120}});
+  const H=(t)=>new D.Paragraph({children:[new D.TextRun({text:t,bold:true,font:"Arial",size:26,color:"1E4FA3"})],spacing:{before:240,after:120}});
   const multi=(t)=>String(t||"").split(/\n+/).filter(Boolean).map(l=>P(l));
   const kids=[];
-  // cabeçalho
+  // cabeçalho: célula da logo (imagem ou espaço reservado) + nome e dados da clínica
   let logo=null;
-  if(clin.logo&&/^data:image\/(png|jpeg);base64,/.test(clin.logo)){ try{ const bin=atob(clin.logo.split(",")[1]); const arr=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i); logo=new D.ImageRun({type:clin.logo.startsWith("data:image/png")?"png":"jpg",data:arr,transformation:{width:120,height:60}}); }catch{} }
-  kids.push(new D.Paragraph({children:logo?[logo]:[new D.TextRun({text:clin.nome||"",bold:true,font:"Arial",size:28})],alignment:D.AlignmentType.CENTER}));
-  if(logo) kids.push(new D.Paragraph({children:[new D.TextRun({text:clin.nome||"",bold:true,font:"Arial",size:24})],alignment:D.AlignmentType.CENTER}));
-  kids.push(new D.Paragraph({children:[new D.TextRun({text:titulos[f.tipo]||titulos.evolucao,bold:true,font:"Arial",size:32,color:"12233D"})],alignment:D.AlignmentType.CENTER,spacing:{before:240,after:240}}));
+  if(clin.logo&&/^data:image\/(png|jpeg);base64,/.test(clin.logo)){ try{ const bin=atob(clin.logo.split(",")[1]); const arr=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i); logo=new D.ImageRun({type:clin.logo.startsWith("data:image/png")?"png":"jpg",data:arr,transformation:{width:130,height:65}}); }catch{} }
+  const fx=clin.fiscal||{};
+  const semBorda={top:{style:D.BorderStyle.NONE,size:0},bottom:{style:D.BorderStyle.NONE,size:0},left:{style:D.BorderStyle.NONE,size:0},right:{style:D.BorderStyle.NONE,size:0}};
+  const celLogo=new D.TableCell({width:{size:30,type:D.WidthType.PERCENTAGE},borders:logo?semBorda:{top:{style:D.BorderStyle.DASHED,size:4,color:"B8C4D6"},bottom:{style:D.BorderStyle.DASHED,size:4,color:"B8C4D6"},left:{style:D.BorderStyle.DASHED,size:4,color:"B8C4D6"},right:{style:D.BorderStyle.DASHED,size:4,color:"B8C4D6"}},verticalAlign:D.VerticalAlign.CENTER,
+    children:[new D.Paragraph({alignment:D.AlignmentType.CENTER,children:logo?[logo]:[new D.TextRun({text:"Espaço para a logo da clínica",font:"Arial",size:16,color:"8A98AD"})]})]});
+  const celNome=new D.TableCell({width:{size:70,type:D.WidthType.PERCENTAGE},borders:semBorda,verticalAlign:D.VerticalAlign.CENTER,children:[
+    new D.Paragraph({children:[new D.TextRun({text:clin.nome||"",bold:true,font:"Arial",size:28,color:"14213D"})]}),
+    ...[fx.cnpj?"CNPJ "+String(fx.cnpj).replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,"$1.$2.$3/$4-$5"):"",[clin.endereco,clin.telefone].filter(Boolean).join(" · ")].filter(Boolean).map(t=>new D.Paragraph({children:[new D.TextRun({text:t,font:"Arial",size:18,color:"4B5A73"})]}))]});
+  kids.push(new D.Table({width:{size:100,type:D.WidthType.PERCENTAGE},borders:semBorda,rows:[new D.TableRow({height:{value:1100,rule:D.HeightRule.ATLEAST},children:[celLogo,celNome]})]}));
+  kids.push(new D.Paragraph({children:[],spacing:{after:120},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:"1E4FA3"}}}));
+  kids.push(new D.Paragraph({children:[new D.TextRun({text:titulos[f.tipo]||titulos.evolucao,bold:true,font:"Arial",size:32,color:"14213D"})],alignment:D.AlignmentType.CENTER,spacing:{before:240,after:240}}));
   if(f.dest) kids.push(P("Para: "+f.dest));
   kids.push(H("Identificação"));
   kids.push(P("Paciente: "+p.nome+(idade?" · "+idade:"")+(p.nascimento?" · nascimento "+curto(p.nascimento)+"/"+p.nascimento.slice(0,4):"")));
@@ -197,15 +247,27 @@ async function prGerarDocx(f, v){
   if(f.inc_ana){
     if(d.anamnese){ kids.push(H("Anamnese")); kids.push(...multi(d.anamnese)); }
     if(d.avaliacao){ kids.push(H("Avaliação")); kids.push(...multi(d.avaliacao)); }
+    const prots=(d.protocolos||[]).filter(p=>p&&p.nome);
+    if(prots.length){ kids.push(H("Protocolos e testes aplicados"));
+      const cel=(t,b,w)=>new D.TableCell({width:{size:w,type:D.WidthType.PERCENTAGE},children:[new D.Paragraph({children:[new D.TextRun({text:t,bold:!!b,font:"Arial",size:20})]})]});
+      const rows=[new D.TableRow({tableHeader:true,children:[cel("Protocolo",1,40),cel("Área",1,20),cel("Data",1,12),cel("Resultado",1,28)]})];
+      for(const p of prots) rows.push(new D.TableRow({children:[cel(p.nome,0,40),cel(p.area||"",0,20),cel(p.data?curto(p.data)+"/"+p.data.slice(0,4):"",0,12),cel(p.resultado||"",0,28)]}));
+      kids.push(new D.Table({width:{size:100,type:D.WidthType.PERCENTAGE},rows})); }
   }
   if(d.habilidades){ kids.push(H("Habilidades")); kids.push(...multi(d.habilidades)); }
   if(d.objetivos){ kids.push(H("Objetivos terapêuticos")); kids.push(...multi(d.objetivos)); }
   if(f.inc_metas){ const metas=PR.metas.filter(m=>m.vinculo_id===v.id&&prNotasDe(m.id).length);
     if(metas.length){ kids.push(H("Metas e habilidades (nota de 1 a 5)")); kids.push(P("1 não apresenta · 2 emergente · 3 com ajuda · 4 com pouca ajuda · 5 consolidada"));
+      // gráfico (PNG desenhado no navegador)
+      try{ const png=prGraficoPng(metas.filter(m=>m.ativa).length?metas.filter(m=>m.ativa):metas); if(png) kids.push(new D.Paragraph({children:[new D.ImageRun({type:"png",data:png,transformation:{width:560,height:260}})],spacing:{after:160}})); }catch(e){}
+      const datas=[...new Set(PR.notas.filter(n=>metas.some(m=>m.id===n.meta_id)&&n.data>=ini&&n.data<=fim).map(n=>n.data))].sort().slice(-5);
       const cel=(t,b,w)=>new D.TableCell({width:{size:w,type:D.WidthType.PERCENTAGE},children:[new D.Paragraph({children:[new D.TextRun({text:t,bold:!!b,font:"Arial",size:20})]})]});
-      const rows=[new D.TableRow({tableHeader:true,children:[cel("Meta",1,46),cel("Área",1,24),cel("Primeira",1,15),cel("Última",1,15)]})];
-      for(const m of metas){ const ns=prNotasDe(m.id), a=ns[0], z=ns[ns.length-1]; rows.push(new D.TableRow({children:[cel(m.descricao+(m.ativa?"":" (encerrada)"),0,46),cel(AREAS[m.area]||m.area,0,24),cel(a.nota+" · "+prMesAno(a.data),0,15),cel(z.nota+" · "+prMesAno(z.data),0,15)]})); }
-      kids.push(new D.Table({width:{size:100,type:D.WidthType.PERCENTAGE},rows})); } }
+      const wd=datas.length?Math.floor(30/datas.length):0;
+      const rows=[new D.TableRow({tableHeader:true,children:[cel("Meta",1,44),cel("Área",1,26-(datas.length?0:0)),...datas.map(d=>cel(prMesAno(d),1,wd))]})];
+      for(const m of metas){ const ns=prNotasDe(m.id); rows.push(new D.TableRow({children:[cel(m.descricao+(m.ativa?"":" (encerrada)"),0,44),cel(AREAS[m.area]||m.area,0,26),...datas.map(d=>{const n=ns.find(x=>x.data===d);return cel(n?String(n.nota):"–",0,wd)})]})); }
+      kids.push(new D.Table({width:{size:100,type:D.WidthType.PERCENTAGE},rows}));
+      const antes=metas.map(m=>{const ns=prNotasDe(m.id);const a=ns.filter(n=>n.data<ini).slice(-1)[0]||ns[0], z=ns.filter(n=>n.data<=fim).slice(-1)[0];return z&&a&&z.id!==a.id?{m,a,z}:null}).filter(Boolean);
+      if(antes.length){ const sub=antes.filter(x=>x.z.nota>x.a.nota).length; kids.push(P(`No período, ${sub} de ${antes.length} ${antes.length===1?"meta":"metas"} ${sub===1?"subiu":"subiram"} de nota: `+antes.map(x=>`${x.m.descricao} ${x.a.nota}→${x.z.nota}`).join("; ")+".",{spacing:{before:120,after:120}})); } } }
   if(f.inc_freq){ kids.push(H("Frequência no período")); kids.push(P(`${ses.length} ${ses.length===1?"sessão agendada":"sessões agendadas"} · ${pres} ${pres===1?"presença":"presenças"} · ${falt} ${falt===1?"falta":"faltas"}${pres+falt?" · "+Math.round(pres*100/(pres+falt))+"% de presença":""}`)); }
   if(f.inc_evo){ kids.push(H("Evolução das sessões"));
     if(!evos.length) kids.push(P("Nenhuma evolução registrada no período."));
