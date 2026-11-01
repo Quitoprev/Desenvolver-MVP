@@ -232,7 +232,7 @@ function render(){
   fab.hidden=!fl||!S.loaded;fab.textContent=fl||"";
   let h="";
   if(!S.loaded)h='<div class="empty"><span>Carregando…</span></div>';
-  else h=({agenda:vAgenda,pacientes:vPacientes,fila:vFila,unimed:vUnimed,caixa:vCaixa,fiscal:vFiscal,reunioes:vReunioes,confirmacoes:vConfirmacoes,jogos:vJogos,painel:typeof vPainel==="function"?vPainel:vAgenda}[S.tab]||vAgenda)();
+  else h=({agenda:vAgenda,pacientes:vPacientes,fila:vFila,unimed:vUnimed,caixa:vCaixa,fiscal:vFiscal,reunioes:vReunioes,confirmacoes:vConfirmacoes,jogos:typeof vJogos==="function"?vJogos:vAgenda,painel:typeof vPainel==="function"?vPainel:vAgenda}[S.tab]||vAgenda)();
   $("view").innerHTML=h;
 }
 function filtroProf(opts){
@@ -1222,10 +1222,16 @@ function sheetConta(){
     <div class="f"><label for="k_cpf">CPF</label><input id="k_cpf" name="cpf" inputmode="numeric" value="${esc(cpfFmt((membro(meuId())||{}).cpf))}"></div>
     <div class="f"><label for="k_reg">Registro no conselho</label><input id="k_reg" name="registro" placeholder="CRFa 4-12345" value="${esc((membro(meuId())||{}).registro||"")}"></div></div>
   <p class="note">${(membro(meuId())||{}).recebe==="pf"?"Você recebe as sessões particulares como pessoa física: o recibo sai pelo Receita Saúde, em seu nome.":"As sessões particulares são faturadas pela clínica."}</p>
+  <div class="f full" style="margin-top:6px"><label>Aparência</label><div class="statusgrid" style="margin-top:4px">${[["auto","Automático"],["light","Claro"],["dark","Escuro"]].map(([k,l])=>`<button type="button" data-act="tema" data-v="${k}" aria-pressed="${temaAtual()===k}">${l}</button>`).join("")}</div><span class="note">Automático segue o tema do aparelho.</span></div>
   <div class="foot"><button type="button" class="btn danger" data-act="sair">Sair</button><div class="r"><button type="button" class="btn" data-act="atualizar">Atualizar dados</button><button class="btn primary" type="submit">Salvar</button></div></div></form>`);
   $("fConta").onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));const cpfD=String(d.cpf||"").replace(/\D/g,"");if(cpfD&&!cpfValido(cpfD))return toast("CPF inválido");
     try{await run(sb.from("membros").update({nome:d.nome,cpf:cpfD||null,registro:d.registro||null}).eq("user_id",meuId()));S.me.nome=d.nome;await reload(["membros"]);closeSheet();toast("Conta atualizada")}catch(err){fail(err)}};
 }
+
+function temaAtual(){try{return localStorage.getItem("rythmos.tema")||"auto"}catch(e){return "auto"}}
+function aplicarTema(v){ if(v==="light"||v==="dark") document.documentElement.setAttribute("data-theme",v); else document.documentElement.removeAttribute("data-theme");
+  const mt=document.querySelector('meta[name="theme-color"]'); if(mt) mt.content=v==="dark"||(v!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches)?"#0B1630":"#1E4FA3"; }
+aplicarTema(temaAtual());
 
 /* ================= ações ================= */
 async function acao(a,t){
@@ -1234,6 +1240,7 @@ async function acao(a,t){
     case"close":return closeSheet();
     case"dia":S.dia=addDays(S.dia,Number(t.dataset.n));return render();
     case"hoje":S.dia=hoje();return render();
+    case"tema":{const v=t.dataset.v;try{localStorage.setItem("rythmos.tema",v)}catch(e){}aplicarTema(v);document.querySelectorAll('[data-act="tema"]').forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===v)));return;}
     case"mes":S.uniMes=addMonths(S.uniMes,Number(t.dataset.n));return render();
     case"mesAtual":S.uniMes=ymOf(hoje());return render();
     case"cx":S.cxMes=addMonths(S.cxMes,Number(t.dataset.n));return render();

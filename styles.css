@@ -7,11 +7,16 @@
   --body:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
   --r:14px; color-scheme:light;
 }
-@media (prefers-color-scheme: dark){:root{
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0B1630; --surface:#14213D; --sunk:#1C2E52; --ink:#E8EEF8; --muted:#9FAEC6; --line:#28406A;
   --accent:#F2B233; --accent-ink:#1A1300; --glow:#F2B233; --glow-soft:#3B2E0E;
   --ok:#5CCB8E; --ok-bg:#163224; --warn:#E8B45A; --warn-bg:#382B14; --bad:#F2857B; --bad-bg:#3A1E1C; --info:#8FB0F0; --info-bg:#1C2B4A;
   color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1630; --surface:#14213D; --sunk:#1C2E52; --ink:#E8EEF8; --muted:#9FAEC6; --line:#28406A;
+  --accent:#F2B233; --accent-ink:#1A1300; --glow:#F2B233; --glow-soft:#3B2E0E;
+  --ok:#5CCB8E; --ok-bg:#163224; --warn:#E8B45A; --warn-bg:#382B14; --bad:#F2857B; --bad-bg:#3A1E1C; --info:#8FB0F0; --info-bg:#1C2B4A;
+  color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom,0px)}

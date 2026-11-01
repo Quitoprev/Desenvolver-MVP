@@ -160,6 +160,19 @@ A aba **Jogos** (dona e profissionais) tem dez atividades para usar no tablet co
 
 No fim da rodada, "Registrar na evolução" anota acertos, tentativas e tempo (ou os pedidos feitos, no "Eu quero") na evolução da sessão de hoje da criança escolhida. "Tela cheia" esconde o resto do app.
 
+## Aparência
+
+Em **Conta → Aparência** cada pessoa escolhe Automático (segue o aparelho), Claro ou Escuro. A escolha fica no aparelho.
+
+## Página de vendas (site)
+
+A página do Rythmos é um arquivo só, `index.html` (do `rythmos-site.zip`), com as imagens embutidas. Duas formas de publicar:
+
+- **Vercel (recomendado):** crie um repositório `rythmos-site` no GitHub só com esse `index.html`, importe na Vercel (preset "Other") e em Settings → Domains aponte `rythmos.com.br` (ou o domínio que escolher). O app fica em `app.rythmos.com.br`, no projeto que já existe.
+- **Hostinger:** no hPanel → Gerenciador de arquivos → `public_html`, envie o `index.html`. O domínio já aponta para lá.
+
+Para trocar textos, edite o `index.html` em qualquer editor; o formulário "Pedir demonstração" monta a mensagem e copia para o WhatsApp — troque o número no final do arquivo (`(82) 9 0000-0000`).
+
 ## App no celular
 
 O Rythmos é um **PWA** (app web instalável). Não precisa de loja nem de versão separada: o mesmo endereço da Vercel vira app no celular, com ícone na tela inicial e abrindo em tela cheia, sem a barra do navegador. Os dados continuam vindo do Supabase ao vivo; só a "casca" do app fica guardada no aparelho para abrir rápido.
