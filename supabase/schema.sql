@@ -138,6 +138,15 @@ alter table public.pacientes add column if not exists email_pagador text;
 alter table public.clinicas add column if not exists fiscal jsonb not null default '{}'::jsonb;
 -- Logo da clínica (imagem pequena, guardada como data URL)
 alter table public.clinicas add column if not exists logo text;
+-- bancos criados por versões antigas podem não ter criado_em
+alter table public.clinicas add column if not exists criado_em timestamptz not null default now();
+alter table public.membros add column if not exists criado_em timestamptz not null default now();
+alter table public.pacientes add column if not exists criado_em timestamptz not null default now();
+alter table public.vinculos add column if not exists criado_em timestamptz not null default now();
+alter table public.sessoes add column if not exists criado_em timestamptz not null default now();
+alter table public.evolucoes add column if not exists criado_em timestamptz not null default now();
+alter table public.pagamentos add column if not exists criado_em timestamptz not null default now();
+alter table public.unimed_ciclos add column if not exists criado_em timestamptz not null default now();
 -- Pagamento: controle do recibo/nota
 alter table public.pagamentos add column if not exists receita_saude_em date;
 alter table public.pagamentos add column if not exists nota_id uuid;
@@ -168,6 +177,7 @@ create table if not exists public.notas_fiscais (
   cancelada_em timestamptz,
   criado_em timestamptz not null default now()
 );
+alter table public.notas_fiscais add column if not exists criado_em timestamptz not null default now();
 create index if not exists notas_clinica_idx on public.notas_fiscais(clinica_id, criado_em);
 alter table public.pagamentos drop constraint if exists pagamentos_nota_fk;
 alter table public.pagamentos add constraint pagamentos_nota_fk foreign key (nota_id) references public.notas_fiscais(id) on delete set null;
@@ -190,6 +200,8 @@ create table if not exists public.reunioes (
   criado_em timestamptz not null default now(),
   atualizado_em timestamptz not null default now()
 );
+alter table public.reunioes add column if not exists criado_em timestamptz not null default now();
+alter table public.reunioes add column if not exists atualizado_em timestamptz not null default now();
 create index if not exists reunioes_clinica_idx on public.reunioes(clinica_id, data desc);
 
 -- ---------- prontuário e documentos ----------
@@ -221,6 +233,7 @@ create table if not exists public.documentos (
   caminho text not null,
   criado_em timestamptz not null default now()
 );
+alter table public.documentos add column if not exists criado_em timestamptz not null default now();
 create index if not exists documentos_paciente_idx on public.documentos(paciente_id, criado_em desc);
 -- Metas/habilidades da terapia, com nota de 1 a 5 a cada avaliação (gráfico de evolução).
 -- 'area' é comum a todas as especialidades, para a visão geral da criança.
@@ -248,6 +261,9 @@ create table if not exists public.metas_notas (
   obs text,
   unique (meta_id, data)
 );
+alter table public.metas add column if not exists criado_em timestamptz not null default now();
+alter table public.metas add column if not exists ordem integer not null default 0;
+alter table public.metas add column if not exists ativa boolean not null default true;
 create index if not exists metas_vinculo_idx on public.metas(vinculo_id);
 create index if not exists metas_notas_paciente_idx on public.metas_notas(paciente_id, data);
 
