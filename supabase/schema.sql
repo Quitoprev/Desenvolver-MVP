@@ -251,6 +251,39 @@ create table if not exists public.metas_notas (
 create index if not exists metas_vinculo_idx on public.metas(vinculo_id);
 create index if not exists metas_notas_paciente_idx on public.metas_notas(paciente_id, data);
 
+-- ---------- auditoria, assinaturas e administração do Rythmos ----------
+-- Quem viu/alterou o quê. Preenchida por triggers (alterações) e pela função registrar_acesso (leituras de prontuário).
+create table if not exists public.auditoria (
+  id bigint generated always as identity primary key,
+  clinica_id uuid not null,
+  user_id uuid,
+  acao text not null,            -- ver | criar | alterar | apagar | exportar | login_mfa
+  tabela text not null,
+  registro_id text,
+  paciente_id uuid,
+  detalhes jsonb,
+  criado_em timestamptz not null default now()
+);
+create index if not exists auditoria_clinica_idx on public.auditoria(clinica_id, criado_em desc);
+create index if not exists auditoria_paciente_idx on public.auditoria(paciente_id, criado_em desc);
+-- Assinatura de cada clínica (cobrança). Só a administração do Rythmos altera.
+create table if not exists public.assinaturas (
+  clinica_id uuid primary key references public.clinicas(id) on delete cascade,
+  plano text not null default 'teste',             -- teste | consultorio | clinica | rede
+  status text not null default 'teste' check (status in ('teste','ativa','atrasada','bloqueada','cancelada')),
+  teste_ate date,
+  pago_ate date,
+  valor numeric(10,2),
+  obs text,
+  atualizado_em timestamptz not null default now()
+);
+-- Pessoas do Rythmos (administração): veem todas as clínicas e mexem nas assinaturas.
+create table if not exists public.admins (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  nome text,
+  criado_em timestamptz not null default now()
+);
+
 create index if not exists membros_clinica_idx on public.membros(clinica_id);
 create index if not exists pacientes_clinica_idx on public.pacientes(clinica_id);
 create index if not exists vinculos_paciente_idx on public.vinculos(paciente_id);
@@ -281,6 +314,12 @@ $$;
 create or replace function public.eh_equipe() returns boolean
 language sql stable security definer set search_path = public as $$
   select coalesce(public.meu_papel() in ('dona','recepcao'), false)
+$$;
+
+-- administração do Rythmos (tabela admins)
+create or replace function public.eh_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from admins where user_id = auth.uid())
 $$;
 
 -- a profissional atende este paciente (tem algum vínculo com ele)?
@@ -537,10 +576,13 @@ alter table public.prontuarios enable row level security;
 alter table public.documentos enable row level security;
 alter table public.metas enable row level security;
 alter table public.metas_notas enable row level security;
+alter table public.auditoria enable row level security;
+alter table public.assinaturas enable row level security;
+alter table public.admins enable row level security;
 
 do $$ declare r record; begin
   for r in select policyname, tablename from pg_policies where schemaname = 'public'
-    and tablename in ('clinicas','membros','pacientes','vinculos','sessoes','evolucoes','pagamentos','unimed_ciclos','notas_fiscais','reunioes','prontuarios','documentos','metas','metas_notas')
+    and tablename in ('clinicas','membros','pacientes','vinculos','sessoes','evolucoes','pagamentos','unimed_ciclos','notas_fiscais','reunioes','prontuarios','documentos','metas','metas_notas','auditoria','assinaturas','admins')
   loop execute format('drop policy %I on public.%I', r.policyname, r.tablename); end loop;
 end $$;
 
@@ -650,6 +692,13 @@ create policy metas_tudo on public.metas for all to authenticated
 create policy metas_notas_tudo on public.metas_notas for all to authenticated
   using (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()))
   with check (clinica_id = public.minha_clinica() and (public.eh_dona() or profissional_id = auth.uid()));
+-- auditoria: a gestora lê a da clínica; ninguém escreve direto (triggers e função)
+create policy auditoria_ver on public.auditoria for select to authenticated
+  using ((clinica_id = public.minha_clinica() and public.eh_dona()) or public.eh_admin());
+-- assinatura: a clínica vê a própria; só admin altera (pela função)
+create policy assinaturas_ver on public.assinaturas for select to authenticated
+  using (clinica_id = public.minha_clinica() or public.eh_admin());
+create policy admins_ver on public.admins for select to authenticated using (user_id = auth.uid() or public.eh_admin());
 -- documentos: dona tudo; profissional vê os dos pacientes que atende e apaga só os que enviou
 create policy documentos_ver on public.documentos for select to authenticated
   using (clinica_id = public.minha_clinica() and (public.eh_dona() or public.atende(paciente_id)));
@@ -672,6 +721,7 @@ begin
     raise exception 'Informe o nome da clínica e o seu nome';
   end if;
   insert into clinicas (nome) values (trim(p_nome)) returning id into c;
+  insert into assinaturas(clinica_id, plano, status, teste_ate) values (c, 'teste', 'teste', current_date + 30) on conflict do nothing;
   insert into membros (user_id, clinica_id, nome, papel, ativo)
     values (auth.uid(), c, trim(p_meu_nome), 'dona', true);
   return c;
@@ -702,10 +752,72 @@ end $$;
 create or replace function public.meu_status() returns json
 language sql stable security definer set search_path = public as $$
   select json_build_object('user_id', m.user_id, 'nome', m.nome, 'papel', m.papel, 'ativo', m.ativo,
-    'clinica_id', m.clinica_id, 'clinica', c.nome)
+    'clinica_id', m.clinica_id, 'clinica', c.nome,
+    'assinatura', (select json_build_object('plano', a.plano, 'status', a.status, 'teste_ate', a.teste_ate, 'pago_ate', a.pago_ate) from assinaturas a where a.clinica_id = c.id),
+    'admin', public.eh_admin())
   from membros m join clinicas c on c.id = m.clinica_id
   where m.user_id = auth.uid()
 $$;
+-- quem é admin do Rythmos mas não é membro de clínica também precisa entrar
+create or replace function public.sou_admin() returns boolean
+language sql stable security definer set search_path = public as $$ select public.eh_admin() $$;
+
+-- registra leitura (abrir prontuário, exportar) — chamada pelo app
+create or replace function public.registrar_acesso(p_acao text, p_tabela text, p_registro text default null, p_paciente uuid default null, p_detalhes jsonb default null) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if public.minha_clinica() is null then return; end if;
+  insert into auditoria(clinica_id, user_id, acao, tabela, registro_id, paciente_id, detalhes)
+    values (public.minha_clinica(), auth.uid(), p_acao, p_tabela, p_registro, p_paciente, p_detalhes);
+end $$;
+
+-- trigger genérico: toda alteração em dados clínicos vira linha de auditoria
+create or replace function public.tg_auditoria() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare j jsonb; pac uuid; cl uuid; det jsonb; reg text;
+begin
+  j := case when tg_op = 'DELETE' then to_jsonb(old) else to_jsonb(new) end;
+  cl := (j->>'clinica_id')::uuid;
+  if cl is null then return null; end if;
+  pac := case when tg_table_name = 'pacientes' then (j->>'id')::uuid else (j->>'paciente_id')::uuid end;
+  reg := coalesce(j->>'id', j->>'user_id', j->>'vinculo_id');
+  det := case when tg_op = 'UPDATE' then jsonb_build_object('campos', (select jsonb_agg(n.key) from jsonb_each(to_jsonb(new)) n where to_jsonb(old)->n.key is distinct from n.value and n.key not in ('atualizado_em')))
+              else null end;
+  insert into auditoria(clinica_id, user_id, acao, tabela, registro_id, paciente_id, detalhes)
+    values (cl, auth.uid(), case tg_op when 'INSERT' then 'criar' when 'UPDATE' then 'alterar' else 'apagar' end, tg_table_name, reg, pac, det);
+  return null;
+end $$;
+do $$ declare t text; begin
+  foreach t in array array['pacientes','vinculos','sessoes','evolucoes','pagamentos','prontuarios','metas','metas_notas','documentos','membros']
+  loop
+    execute format('drop trigger if exists %I on public.%I', t||'_aud', t);
+    execute format('create trigger %I after insert or update or delete on public.%I for each row execute function public.tg_auditoria()', t||'_aud', t);
+  end loop;
+end $$;
+
+-- administração do Rythmos: lista de clínicas com números e assinatura
+create or replace function public.admin_clinicas() returns json
+language sql stable security definer set search_path = public as $$
+  select coalesce(json_agg(json_build_object(
+    'id', c.id, 'nome', c.nome, 'criado_em', c.criado_em,
+    'membros', (select count(*) from membros m where m.clinica_id = c.id and m.ativo),
+    'pacientes', (select count(*) from pacientes p where p.clinica_id = c.id),
+    'sessoes_30d', (select count(*) from sessoes s where s.clinica_id = c.id and s.data >= current_date - 30 and s.data <= current_date),
+    'ultimo_acesso', (select max(a.criado_em) from auditoria a where a.clinica_id = c.id),
+    'gestora', (select m.nome from membros m where m.clinica_id = c.id and m.papel = 'dona' limit 1),
+    'assinatura', (select row_to_json(a) from assinaturas a where a.clinica_id = c.id)
+  ) order by c.criado_em desc), '[]'::json)
+  from clinicas c where public.eh_admin()
+$$;
+create or replace function public.admin_assinatura(p_clinica uuid, p_plano text, p_status text, p_teste_ate date, p_pago_ate date, p_valor numeric, p_obs text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.eh_admin() then raise exception 'Só a administração do Rythmos'; end if;
+  insert into assinaturas(clinica_id, plano, status, teste_ate, pago_ate, valor, obs)
+    values (p_clinica, p_plano, p_status, p_teste_ate, p_pago_ate, p_valor, p_obs)
+  on conflict (clinica_id) do update set plano = excluded.plano, status = excluded.status, teste_ate = excluded.teste_ate,
+    pago_ate = excluded.pago_ate, valor = excluded.valor, obs = excluded.obs, atualizado_em = now();
+end $$;
 
 create or replace function public.novo_codigo() returns text
 language plpgsql security definer set search_path = public as $$
@@ -791,6 +903,10 @@ revoke all on function public.apagar_exemplos() from public, anon;
 grant execute on function public.criar_clinica(text, text) to authenticated;
 grant execute on function public.entrar_clinica(text, text, text) to authenticated;
 grant execute on function public.meu_status() to authenticated;
+grant execute on function public.registrar_acesso(text, text, text, uuid, jsonb) to authenticated;
+grant execute on function public.admin_clinicas() to authenticated;
+grant execute on function public.admin_assinatura(uuid, text, text, date, date, numeric, text) to authenticated;
+grant execute on function public.sou_admin() to authenticated;
 grant execute on function public.novo_codigo() to authenticated;
 grant execute on function public.carregar_exemplos() to authenticated;
 grant execute on function public.apagar_exemplos() to authenticated;
@@ -800,6 +916,8 @@ grant select, insert, update, delete on
   public.evolucoes, public.pagamentos, public.unimed_ciclos, public.notas_fiscais, public.reunioes,
   public.prontuarios, public.documentos, public.metas, public.metas_notas
   to authenticated;
+grant select on public.auditoria, public.assinaturas, public.admins to authenticated;
+revoke insert, update, delete on public.auditoria, public.assinaturas, public.admins from authenticated;
 revoke all on
   public.clinicas, public.membros, public.pacientes, public.vinculos, public.sessoes,
   public.evolucoes, public.pagamentos, public.unimed_ciclos, public.notas_fiscais, public.reunioes,

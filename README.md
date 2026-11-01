@@ -19,6 +19,7 @@ Cada pessoa da equipe tem uma **função**, escolhida ao pedir acesso e confirma
 | Caixa | de todas, com fechamento | não vê | só o dela |
 | Painel da clínica (evolução por área, metas estagnadas) | sim | não | não |
 | Reuniões e atas | sim | não | não |
+| Auditoria (quem viu/alterou o quê) e exportação completa | sim | não | não |
 | Equipe, mensagens, logo, importação | sim | não | não |
 
 Essas regras ficam no banco de dados (Supabase), não só na tela. Mesmo alguém que mexa no app não consegue ver o que não pode.
@@ -39,6 +40,7 @@ Essas regras ficam no banco de dados (Supabase), não só na tela. Mesmo alguém
    Nunca cole ali a chave `service_role` ou `secret`.
 
 ### 3. Vercel (endereço do app)
+Domínios do Rythmos (projeto do app → Settings → Domains): `app.rythmosapp.com.br` e `admin.rythmosapp.com.br`. O `vercel.json` faz o `admin.` abrir a administração (`admin.html`) e o `app.` abrir o app da clínica. Na Hostinger (zona DNS): `A @ → 76.76.21.21`, `CNAME www → cname.vercel-dns.com`, `CNAME app → cname.vercel-dns.com`, `CNAME admin → cname.vercel-dns.com`. O site de vendas fica no projeto `rythmos-site`, com `rythmosapp.com.br` e `www`.
 1. Em [vercel.com](https://vercel.com), entre com a mesma conta do GitHub. Clique em **Add New** → **Project** e importe o repositório.
 2. Em **Framework Preset**, escolha **Other** e clique em **Deploy**. Não precisa configurar mais nada.
 3. Copie o endereço que a Vercel criar (algo como `sessio-xxxx.vercel.app`).
@@ -164,6 +166,45 @@ A aba **Jogos** (dona e profissionais) tem dez atividades para usar no tablet co
 
 No fim da rodada, "Registrar na evolução" anota acertos, tentativas e tempo (ou os pedidos feitos, no "Eu quero") na evolução da sessão de hoje da criança escolhida. "Tela cheia" esconde o resto do app.
 
+## Segurança e operação
+
+### E-mail de confirmação e "esqueci a senha" (SMTP próprio) — você faz, 15 minutos
+O e-mail que vem com o Supabase só entrega para a equipe do projeto. Para a clínica inteira receber confirmação de conta e link de nova senha:
+1. Crie uma conta gratuita em [resend.com](https://resend.com) (3.000 e-mails/mês). Em **Domains**, adicione seu domínio e crie na Hostinger os registros DNS que ele mostrar (TXT e MX). Espere ficar "Verified".
+2. Em **API Keys**, crie uma chave.
+3. No Supabase: **Authentication → Emails → SMTP Settings** → ligue "Enable Custom SMTP": Host `smtp.resend.com`, Port `465`, User `resend`, Password = a chave, Sender `nao-responda@seudominio.com.br`, Sender name `Rythmos`.
+4. Em **Authentication → Sign In / Providers → Email**, ligue de volta **Confirm email**. Em **URL Configuration**, confira Site URL e Redirect URLs com o endereço do app.
+5. Teste: crie uma conta nova e peça "Esqueci a senha".
+
+### Verificação em duas etapas (2FA)
+Em **Conta**, qualquer pessoa ativa a verificação em duas etapas: lê um QR code no Google Authenticator (ou Microsoft Authenticator, Authy) e passa a digitar um código de 6 dígitos a cada login. Recomendado para a gestora. Para funcionar, ligue no Supabase: **Authentication → Multi-Factor Auth → TOTP → Enable** (gratuito).
+
+### Auditoria
+Toda criação, alteração ou exclusão em pacientes, terapias, sessões, evoluções, pagamentos, prontuários, metas, documentos e equipe vira uma linha na tabela `auditoria`, gravada pelo próprio banco (ninguém consegue apagar ou editar pelo app). Abrir um prontuário, gerar relatório e exportar dados também ficam registrados. A gestora vê tudo em **Clínica → Auditoria**, com busca e CSV.
+
+### Assinaturas e administração do Rythmos
+Cada clínica tem uma assinatura (`assinaturas`): plano, situação (teste / ativa / atrasada / bloqueada / cancelada), teste até, pago até, valor. Ao criar a clínica, ela entra em **teste por 30 dias**. A gestora vê a situação em **Clínica → Dados**.
+- **atrasada**: aviso na Agenda da gestora; o app continua funcionando.
+- **bloqueada / cancelada**: a equipe vê "Assinatura suspensa"; a gestora ainda consegue **exportar tudo**.
+
+A administração do Rythmos (você) fica **fora do app das clínicas**, no endereço `/admin.html` (ex.: `app.rythmos.com.br/admin.html`), com login próprio. Lá aparecem todas as clínicas: equipe, pacientes, sessões em 30 dias, último uso, plano, situação e receita mensal (MRR). Tocar na clínica edita a assinatura. Para virar administradora, rode no SQL Editor (uma vez, com o seu e-mail):
+```sql
+insert into public.admins(user_id, nome) select id, 'Maria Helena' from auth.users where email = 'seu@email.com';
+```
+Use uma conta só para isso (um e-mail seu que não seja membro de clínica). Quem não estiver na tabela `admins` vê "Esta conta não é da administração". Ative a verificação em duas etapas nessa conta.
+
+### Exportação completa (LGPD)
+**Clínica → Dados → Exportar tudo (.zip)**: todas as tabelas em CSV (Excel) e JSON, mais os documentos anexados aos pacientes. A clínica leva os dados quando quiser; a exportação fica na auditoria.
+
+### Monitoramento de erros (Sentry)
+Crie um projeto "Browser JavaScript" em [sentry.io](https://sentry.io) (plano gratuito) e cole o DSN em `config.js` (`SENTRY_DSN`). Os erros do app passam a chegar no seu e-mail, sem dados de pacientes (o app não envia nomes nem identificadores).
+
+### Testes automáticos (GitHub Actions)
+A pasta `tests/` tem os testes do banco (`run-sql.sh` + `test.sql`: regras de acesso por papel) e das telas (`smoke*.py`, Playwright). O arquivo `.github/workflows/ci.yml` roda tudo a cada envio para o GitHub; o resultado aparece na aba **Actions** do repositório e como ✓/✗ ao lado do commit. Rodar localmente: `PGURL=postgres://... tests/run-sql.sh` e `cd tests && python serve.py smoke8.py`.
+
+### Backups
+No plano gratuito do Supabase não há backup automático. Antes de a clínica usar de verdade, mude para o plano **Pro** (US$ 25/mês): backups diários, sem pausa por inatividade e mais espaço para documentos. Enquanto isso, a exportação completa serve como cópia manual.
+
 ## Aparência
 
 Em **Conta → Aparência** cada pessoa escolhe Automático (segue o aparelho), Claro ou Escuro. A escolha fica no aparelho.
@@ -194,12 +235,15 @@ Arquivos envolvidos: `manifest.json` (nome, cores e ícones), `sw.js` (cache da 
 
 ## Arquivos
 
-- `index.html`, `styles.css`, `app.js`, `jogos.js`, `prontuario.js`, `painel.js`, `agenda.js`: o app. Roda direto no navegador, sem etapa de build.
+- `vercel.json`: liga `admin.rythmosapp.com.br` à página de administração e põe cabeçalhos de segurança.
+- `admin.html`: a página da administração do Rythmos (mesmo código, modo admin).
+- `index.html`, `styles.css`, `app.js`, `jogos.js`, `prontuario.js`, `painel.js`, `agenda.js`, `admin.js`: o app. Roda direto no navegador, sem etapa de build.
 - `config.js`: endereço e chave pública do Supabase.
 - `manifest.json`, `sw.js`, `icons/`: o que faz o app ser instalável no celular.
 - `supabase/schema.sql`: tabelas, regras de acesso e funções. Pode ser rodado de novo para atualizar, sem perder dados.
 - `supabase/functions/nfse/index.ts`: função que emite, consulta e cancela a NFS-e (roda no Supabase).
 - `supabase/functions/reunioes/index.ts`: função que transcreve gravações e gera atas (roda no Supabase).
+- `tests/` e `.github/workflows/ci.yml`: testes automáticos.
 
 ## Custos
 

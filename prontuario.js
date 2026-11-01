@@ -35,6 +35,7 @@ async function sheetProntuario(pid, vid){
       run(sb.from("metas_notas").select("*").eq("paciente_id",pid).order("data")),
     ]);
     PR.dados=Object.fromEntries(pr.map(x=>[x.vinculo_id,x])); PR.docs=docs; PR.metas=metas; PR.notas=notas;
+    if(typeof auditar==="function") auditar("ver","prontuarios",PR.vid,pid);
   }catch(e){ fail(e); return; }
   renderProntuario();
 }
@@ -282,7 +283,7 @@ async function prGerarDocx(f, v){
   const blob=await D.Packer.toBlob(doc);
   const nome=`${(titulos[f.tipo]||"Relatorio").split(" ")[0]}-${p.nome.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\W+/g,"-").replace(/^-|-$/g,"")}-${fim}.docx`;
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=nome; document.body.appendChild(a); a.click(); a.remove();
-  toast("Relatório gerado");
+  toast("Relatório gerado"); if(typeof auditar==="function") auditar("exportar","prontuarios",v.id,p.id,{tipo:f.tipo,de:ini,ate:fim});
   if(f.guardar){ await prAnexar(new File([blob],nome,{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}),nome); }
   else sheetProntuario(PR.pid,PR.vid);
 }

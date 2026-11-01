@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rythmos · Administração</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><rect width='120' height='120' rx='28' fill='%231E4FA3'/><g transform='translate(14 24) scale(1.55)'><path d='M5 29 C12 29 13 20 20 20 C27 20 28 27 35 25 C41 23 42 14 46 12' fill='none' stroke='white' stroke-width='5' stroke-linecap='round'/><circle cx='53' cy='10' r='6' fill='%23F2B233'/></g></svg>">
+<meta name="theme-color" content="#1E4FA3">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Rythmos">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="gate" class="gate" hidden></div>
+
+<div id="app" hidden>
+  <header class="top">
+    <div class="wrap">
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 60 40" aria-hidden="true"><path class="mk-line" d="M5 29 C12 29 13 20 20 20 C27 20 28 27 35 25 C41 23 42 14 46 12" fill="none" stroke-width="5" stroke-linecap="round"/><circle class="mk-dot" cx="53" cy="10" r="6"/></svg>
+        <span class="word">rythmos</span>
+        <img id="clinicLogo" class="clogo" alt="" hidden><span class="clinic" id="clinicName"></span>
+        <button class="iconbtn" id="btnClinica" type="button" hidden>Clínica</button>
+        <button class="iconbtn" id="btnConta" type="button">Conta</button>
+      </div>
+      <nav class="tabs" role="tablist" id="tabs"></nav>
+    </div>
+  </header>
+  <main><div class="wrap" id="view"></div></main>
+  <button class="fab" id="fab" type="button" hidden></button>
+</div>
+
+<div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<script>window.RYTHMOS_MODO="admin";</script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="jogos.js"></script>
+<script src="prontuario.js"></script>
+<script src="painel.js"></script>
+<script src="agenda.js"></script>
+<script src="admin.js"></script>
+
+</body>
+</html>
