@@ -232,6 +232,7 @@ function render(){
   $("clinicName").textContent=S.me?(S.adminSolo?"Administração do Rythmos":(S.clinica.nome||S.me.clinica)+" · "+(isProf()?S.me.nome:PAPEL[papel()])):"";
   $("btnClinica").hidden=!isDona()||!!S.adminSolo;
   const lg=$("clinicLogo");if(S.clinica.logo){lg.src=S.clinica.logo;lg.hidden=false}else lg.hidden=true;
+  document.body.classList.toggle("temLogo",!!S.clinica.logo&&!S.adminSolo);
   const pend=S.loaded?{agenda:minhasPendencias().length,fila:filaLista().length,unimed:pendUnimed(),fiscal:canCaixa()&&FISCAL_ATIVO?pendFiscal():0,confirmacoes:semanaDados(S.semIni).famSemResposta}:{};
   $("tabs").innerHTML=tabs().map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}${pend[k]?`<span class="n${k!=="fila"?" dot":""}">${pend[k]}</span>`:""}</button>`).join("");
   const fab=$("fab");

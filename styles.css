@@ -291,3 +291,12 @@ form{display:flex;flex-direction:column;gap:14px;margin:0}
 .prProtF input,.prProt.novo>input{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:inherit;font-size:14px;background:var(--bg);color:var(--ink);min-width:0;width:100%}
 .prProt.novo>input{margin-top:4px}
 @media (max-width:520px){.prProtF{grid-template-columns:1fr;margin-left:0}}
+
+/* logo da clínica no lugar da marca; marca do Rythmos vai para o rodapé */
+body.temLogo .top .brand .mark,body.temLogo .top .brand .word{display:none}
+body.temLogo .clogo{height:40px;max-width:160px}
+.rodape{padding:28px 0 calc(40px + env(safe-area-inset-bottom,0px));color:var(--muted);font-size:12px}
+.rodape .wrap{display:flex;align-items:center;justify-content:center;gap:8px}
+.rodape .mark{width:30px;height:20px}.rodape .mark .mk-line{stroke:var(--muted)}
+.rodape b{font-family:var(--display);font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+#app[hidden]~.rodape,.gate:not([hidden])~#app .rodape{display:none}
