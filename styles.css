@@ -1,21 +1,21 @@
-/* Rythmos — app de uma coluna, cabeçalho fixo com abas. Azul do autismo como base, dourado (Au, neurodiversidade) como acento, azul-claro nos fundos. */
+/* Rythmos — app de uma coluna, cabeçalho fixo com abas. Paleta Vincla: ameixa (marca e botões), cacau (texto), linho (fundo), ouro como acento; rosa-chá, ouro e sálvia para as especialidades. */
 :root{
-  --bg:#EEF3FB; --surface:#FFFFFF; --sunk:#E1EAF6; --ink:#14213D; --muted:#4B5A73; --line:#D3DDEC;
-  --accent:#1E4FA3; --accent-ink:#FFFFFF; --glow:#F2B233; --glow-soft:#FDF1D3;
-  --ok:#1F7A62; --ok-bg:#E3F5EF; --warn:#92400E; --warn-bg:#FEF3C7; --bad:#B42318; --bad-bg:#FDECEA; --info:#2C5A9E; --info-bg:#E8EDF5;
+  --bg:#F9F3EF; --surface:#FFFFFF; --sunk:#F1E6E2; --ink:#2A1424; --muted:#6B5560; --line:#E6D6D5;
+  --accent:#7A2E5B; --accent-ink:#FFFFFF; --glow:#E3B23C; --glow-soft:#F8ECCF;
+  --ok:#3E7D64; --ok-bg:#E4F0EA; --warn:#8A5A12; --warn-bg:#F8ECCF; --bad:#B4382E; --bad-bg:#FBE4E1; --info:#7A2E5B; --info-bg:#F3E4EC;
   --display:"Manrope","Avenir Next","Segoe UI",system-ui,sans-serif;
   --body:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
   --r:14px; color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0B1630; --surface:#14213D; --sunk:#1C2E52; --ink:#E8EEF8; --muted:#9FAEC6; --line:#28406A;
-  --accent:#F2B233; --accent-ink:#1A1300; --glow:#F2B233; --glow-soft:#3B2E0E;
-  --ok:#5CCB8E; --ok-bg:#163224; --warn:#E8B45A; --warn-bg:#382B14; --bad:#F2857B; --bad-bg:#3A1E1C; --info:#8FB0F0; --info-bg:#1C2B4A;
+  --bg:#1C0E18; --surface:#2A1424; --sunk:#3A1F33; --ink:#F6EAF0; --muted:#C9B0BD; --line:#4A2E42;
+  --accent:#E3B23C; --accent-ink:#2A1424; --glow:#E3B23C; --glow-soft:#4A3A12;
+  --ok:#8FB9A8; --ok-bg:#1F3A30; --warn:#E8B45A; --warn-bg:#3A2E0E; --bad:#F2857B; --bad-bg:#3A1E1C; --info:#E8A598; --info-bg:#4A2A2E;
   color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0B1630; --surface:#14213D; --sunk:#1C2E52; --ink:#E8EEF8; --muted:#9FAEC6; --line:#28406A;
-  --accent:#F2B233; --accent-ink:#1A1300; --glow:#F2B233; --glow-soft:#3B2E0E;
-  --ok:#5CCB8E; --ok-bg:#163224; --warn:#E8B45A; --warn-bg:#382B14; --bad:#F2857B; --bad-bg:#3A1E1C; --info:#8FB0F0; --info-bg:#1C2B4A;
+  --bg:#1C0E18; --surface:#2A1424; --sunk:#3A1F33; --ink:#F6EAF0; --muted:#C9B0BD; --line:#4A2E42;
+  --accent:#E3B23C; --accent-ink:#2A1424; --glow:#E3B23C; --glow-soft:#4A3A12;
+  --ok:#8FB9A8; --ok-bg:#1F3A30; --warn:#E8B45A; --warn-bg:#3A2E0E; --bad:#F2857B; --bad-bg:#3A1E1C; --info:#E8A598; --info-bg:#4A2A2E;
   color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -246,7 +246,7 @@ form{display:flex;flex-direction:column;gap:14px;margin:0}
 @media (prefers-reduced-motion:reduce){.jgBolha{transition:none}}
 
 /* aviso de instalação (PWA) */
-.instalar{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:var(--surface,#fff);color:var(--ink,#12233D);border:1px solid var(--line,#d9e3e8);box-shadow:0 8px 30px rgba(18,35,61,.18);font-size:14px}
+.instalar{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:var(--surface,#fff);color:var(--ink,#2A1424);border:1px solid var(--line,#d9e3e8);box-shadow:0 8px 30px rgba(18,35,61,.18);font-size:14px}
 .instalar .r{display:flex;gap:8px;margin-left:auto}
 
 /* agenda inteligente */

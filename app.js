@@ -1244,7 +1244,7 @@ function sheetConta(){
 
 function temaAtual(){try{return localStorage.getItem("rythmos.tema")||"auto"}catch(e){return "auto"}}
 function aplicarTema(v){ if(v==="light"||v==="dark") document.documentElement.setAttribute("data-theme",v); else document.documentElement.removeAttribute("data-theme");
-  const mt=document.querySelector('meta[name="theme-color"]'); if(mt) mt.content=v==="dark"||(v!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches)?"#0B1630":"#1E4FA3"; }
+  const mt=document.querySelector('meta[name="theme-color"]'); if(mt) mt.content=v==="dark"||(v!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches)?"#1C0E18":"#7A2E5B"; }
 aplicarTema(temaAtual());
 (function(){ const dsn=CFG&&CFG.SENTRY_DSN; if(!dsn) return; const sc=document.createElement("script"); sc.src="https://browser.sentry-cdn.com/8.30.0/bundle.min.js"; sc.crossOrigin="anonymous"; sc.onload=()=>{ try{ window.Sentry.init({dsn,release:"rythmos",environment:location.hostname,sendDefaultPii:false,beforeSend(ev){ if(ev.user) delete ev.user; return ev; }}); }catch(e){} }; document.head.appendChild(sc); })();
 

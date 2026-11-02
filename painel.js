@@ -68,8 +68,8 @@ function vPainel(){
   if(!areas.length) h+=`<p class="note">Ainda não há metas com duas avaliações no período. Com a segunda avaliação, aparece aqui quantas crianças evoluíram em cada área.</p>`;
   else h+=`<div class="hist" style="max-height:none">${areas.map(a=>{const tot=a.n||1;const seg=(n,c)=>n?`<div style="width:${n/tot*100}%;background:${c}" title="${n}"></div>`:"";
     return `<div style="display:block"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${esc(AREAS[a.area]||a.area)}</b><span class="note">${a.n} ${a.n===1?"criança":"crianças"} · ${a.metas} ${a.metas===1?"meta":"metas"} · média ${a.media>0?"+":""}${a.media.toFixed(1)}</span></div>
-    <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line);margin-top:6px">${seg(a.evoluiram,"#1F7A62")}${seg(a.estaveis,"#94a3b8")}${seg(a.regrediram,"#C2410C")}</div>
-    <div class="note" style="margin-top:4px"><span style="color:#1F7A62">■</span> ${a.evoluiram} evoluíram · <span style="color:#94a3b8">■</span> ${a.estaveis} estáveis · <span style="color:#C2410C">■</span> ${a.regrediram} regrediram</div></div>`}).join("")}</div>`;
+    <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line);margin-top:6px">${seg(a.evoluiram,"#5E9A85")}${seg(a.estaveis,"#C9B0BD")}${seg(a.regrediram,"#B4382E")}</div>
+    <div class="note" style="margin-top:4px"><span style="color:#5E9A85">■</span> ${a.evoluiram} evoluíram · <span style="color:#C9B0BD">■</span> ${a.estaveis} estáveis · <span style="color:#B4382E">■</span> ${a.regrediram} regrediram</div></div>`}).join("")}</div>`;
   // por profissional
   const prof={};
   for(const l of linhas){ const k=l.v.profissional_id||"-"; (prof[k]=prof[k]||{ativas:0,avals:0,comp:0,sub:0,criancas:new Set()}); if(l.m.ativa)prof[k].ativas++; prof[k].avals+=l.avalsPeriodo; if(l.comparavel){prof[k].comp++; if(l.delta>0)prof[k].sub++} if(l.avalsPeriodo)prof[k].criancas.add(l.p.id); }

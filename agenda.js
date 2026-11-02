@@ -4,10 +4,10 @@
 
 const AG = { vista:(()=>{try{return localStorage.getItem("rythmos.agVista")||"dia"}catch(e){return "dia"}})() };
 const TERAPIA_CORES = [
-  [/fono/i,"#1F7A62"],[/ocupacional|\bTO\b/i,"#C2410C"],[/psicolog/i,"#7C3AED"],[/psicopedag/i,"#2F6DB5"],
-  [/musico/i,"#BE185D"],[/fisio/i,"#0E7490"],[/nutri/i,"#A16207"],[/aba/i,"#4D7C0F"]
+  [/fono/i,"#D98B7A"],[/ocupacional|TO/i,"#C9961E"],[/psicolog/i,"#5E9A85"],[/psicopedag/i,"#B07AA0"],
+  [/musico/i,"#C97B5B"],[/fisio/i,"#5E8FA3"],[/nutri/i,"#8E9B4A"],[/aba/i,"#7A2E5B"]
 ];
-const AG_FALLBACK=["#475569","#6B7280","#0F766E","#9333EA","#B45309"];
+const AG_FALLBACK=["#6B5560","#8A6A7A","#4F7F75","#9B5C86","#A6742C"];
 function corTerapia(t){
   t=String(t||"");
   for(const [re,c] of TERAPIA_CORES) if(re.test(t)) return c;

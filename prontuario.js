@@ -15,7 +15,7 @@ const PROTOCOLOS = [
   ["Triagem e desenvolvimento",["M-CHAT-R/F","Denver II – Teste de Triagem do Desenvolvimento","Bayley-III","ADOS-2 (laudo externo)"]],
 ];
 const NOTAS = {1:"não apresenta",2:"emergente",3:"com ajuda",4:"com pouca ajuda",5:"consolidada"};
-const PR_CORES = ["#1F7A62","#2F6DB5","#C2410C","#7C3AED","#BE185D","#0E7490","#A16207","#475569"];
+const PR_CORES = ["#7A2E5B","#C9961E","#5E9A85","#D98B7A","#5E8FA3","#B07AA0","#C97B5B","#6B5560"];
 
 function prVinculosVisiveis(pid){
   return S.vin.filter(v=>v.paciente_id===pid&&(isDona()||v.profissional_id===meuId()));
@@ -120,7 +120,7 @@ function prSecaoMetas(v,vins){
   if(!minhas.length) return h+'<p class="note" style="margin-top:8px">Nenhuma meta ainda. Cadastre as habilidades que esta terapia trabalha (ex.: "aumento de vocabulário", "registro no sistema tátil") e avalie de 1 a 5 a cada período.</p></div>';
   h+=prGrafico(ativas);
   h+=`<div class="hist" style="margin-top:8px;max-height:none">${minhas.map((m,i)=>{const ns=prNotasDe(m.id);const seq=ns.map(n=>n.nota).join(" → ");const ult=ns[ns.length-1];
-    return `<div data-act="prEditMeta" data-id="${m.id}" role="button" tabindex="0"><span style="min-width:0"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${m.ativa?PR_CORES[ativas.indexOf(m)%PR_CORES.length]:"#cbd5e1"};margin-right:6px"></span><b>${esc(m.descricao)}</b>${m.ativa?"":' <span class="pill p-mute">encerrada</span>'}<br><span class="note">${esc(AREAS[m.area]||m.area)}${ns.length?" · "+seq+" · última "+prMesAno(ult.data):" · sem avaliação"}</span></span>${ult?`<span class="pill ${ult.nota>=4?"p-ok":ult.nota>=3?"p-confirmada":"p-warn"}" style="flex:none;white-space:nowrap">${ult.nota} · ${NOTAS[ult.nota]}</span>`:""}</div>`}).join("")}</div></div>`;
+    return `<div data-act="prEditMeta" data-id="${m.id}" role="button" tabindex="0"><span style="min-width:0"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${m.ativa?PR_CORES[ativas.indexOf(m)%PR_CORES.length]:"#E6D6D5"};margin-right:6px"></span><b>${esc(m.descricao)}</b>${m.ativa?"":' <span class="pill p-mute">encerrada</span>'}<br><span class="note">${esc(AREAS[m.area]||m.area)}${ns.length?" · "+seq+" · última "+prMesAno(ult.data):" · sem avaliação"}</span></span>${ult?`<span class="pill ${ult.nota>=4?"p-ok":ult.nota>=3?"p-confirmada":"p-warn"}" style="flex:none;white-space:nowrap">${ult.nota} · ${NOTAS[ult.nota]}</span>`:""}</div>`}).join("")}</div></div>`;
   return h;
 }
 function prGrafico(metas){
@@ -145,7 +145,7 @@ function prGeral(vins){
   let h='<div class="hist" style="margin-top:10px;max-height:none">';
   for(const a of areas){ const i=med(por[a].ini), f=med(por[a].fim), d=f-i;
     h+=`<div style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(AREAS[a]||a)}</b><span class="pill ${d>0?"p-ok":d<0?"p-warn":"p-mute"}">${d>0?"+":""}${d.toFixed(1)}</span></div><div class="note">${por[a].n} ${por[a].n===1?"meta":"metas"} · ${esc([...por[a].ter].join(", "))}</div>
-      <div style="display:grid;grid-template-columns:70px 1fr 30px;gap:6px;align-items:center;margin-top:6px;font-size:12px"><span>primeira</span><div style="height:8px;background:var(--line);border-radius:4px"><div style="height:8px;width:${(i-1)/4*100}%;background:#94a3b8;border-radius:4px"></div></div><b>${i.toFixed(1)}</b><span>última</span><div style="height:8px;background:var(--line);border-radius:4px"><div style="height:8px;width:${(f-1)/4*100}%;background:#1F7A62;border-radius:4px"></div></div><b>${f.toFixed(1)}</b></div></div>`; }
+      <div style="display:grid;grid-template-columns:70px 1fr 30px;gap:6px;align-items:center;margin-top:6px;font-size:12px"><span>primeira</span><div style="height:8px;background:var(--line);border-radius:4px"><div style="height:8px;width:${(i-1)/4*100}%;background:#C9B0BD;border-radius:4px"></div></div><b>${i.toFixed(1)}</b><span>última</span><div style="height:8px;background:var(--line);border-radius:4px"><div style="height:8px;width:${(f-1)/4*100}%;background:#5E9A85;border-radius:4px"></div></div><b>${f.toFixed(1)}</b></div></div>`; }
   return h+"</div>";
 }
 function sheetMeta(id){
@@ -182,10 +182,10 @@ function prGraficoPng(metas){
   const W=1120,H=520,L=60,R=30,T=30,B=110,c=document.createElement("canvas");c.width=W;c.height=H;const g=c.getContext("2d");
   g.fillStyle="#fff";g.fillRect(0,0,W,H);g.font="22px Arial";g.textBaseline="middle";
   const x=i=>datas.length===1?(L+W-R)/2:L+(W-L-R)*i/(datas.length-1), y=n=>T+(H-T-B)*(5-n)/4;
-  for(let n=1;n<=5;n++){g.strokeStyle="#D9E3E8";g.setLineDash(n===1?[]:[4,6]);g.beginPath();g.moveTo(L,y(n));g.lineTo(W-R,y(n));g.stroke();g.fillStyle="#475569";g.textAlign="right";g.fillText(String(n),L-12,y(n));}
+  for(let n=1;n<=5;n++){g.strokeStyle="#E6D6D5";g.setLineDash(n===1?[]:[4,6]);g.beginPath();g.moveTo(L,y(n));g.lineTo(W-R,y(n));g.stroke();g.fillStyle="#6B5560";g.textAlign="right";g.fillText(String(n),L-12,y(n));}
   g.setLineDash([]);g.textAlign="center";datas.forEach((d,i)=>{if(datas.length<=8||i%Math.ceil(datas.length/8)===0||i===datas.length-1)g.fillText(prMesAno(d),x(i),H-B+28)});
   metas.forEach((m,k)=>{const col=PR_CORES[k%PR_CORES.length];const pts=prNotasDe(m.id).map(n=>[x(datas.indexOf(n.data)),y(n.nota)]);if(!pts.length)return;g.strokeStyle=col;g.lineWidth=4;g.lineJoin="round";g.beginPath();pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.stroke();g.fillStyle=col;pts.forEach(p=>{g.beginPath();g.arc(p[0],p[1],7,0,7);g.fill()});});
-  let lx=L,ly=H-40;g.textAlign="left";g.font="20px Arial";metas.forEach((m,k)=>{const t=m.descricao.length>34?m.descricao.slice(0,33)+"…":m.descricao;const w=g.measureText(t).width+34;if(lx+w>W-R){lx=L;ly+=28}g.fillStyle=PR_CORES[k%PR_CORES.length];g.fillRect(lx,ly-8,16,16);g.fillStyle="#12233D";g.fillText(t,lx+22,ly);lx+=w;});
+  let lx=L,ly=H-40;g.textAlign="left";g.font="20px Arial";metas.forEach((m,k)=>{const t=m.descricao.length>34?m.descricao.slice(0,33)+"…":m.descricao;const w=g.measureText(t).width+34;if(lx+w>W-R){lx=L;ly+=28}g.fillStyle=PR_CORES[k%PR_CORES.length];g.fillRect(lx,ly-8,16,16);g.fillStyle="#2A1424";g.fillText(t,lx+22,ly);lx+=w;});
   const b64=c.toDataURL("image/png").split(",")[1];const bin=atob(b64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return arr;
 }
 
@@ -222,7 +222,7 @@ async function prGerarDocx(f, v){
   const titulos={evolucao:"Relatório de evolução terapêutica",avaliacao:"Relatório de avaliação",escola:"Relatório para a escola",convenio:"Relatório para o convênio"};
   const D=window.docx;
   const P=(t,o)=>new D.Paragraph(Object.assign({children:[new D.TextRun({text:t,font:"Arial",size:22})],spacing:{after:120}},o||{}));
-  const H=(t)=>new D.Paragraph({children:[new D.TextRun({text:t,bold:true,font:"Arial",size:26,color:"1E4FA3"})],spacing:{before:240,after:120}});
+  const H=(t)=>new D.Paragraph({children:[new D.TextRun({text:t,bold:true,font:"Arial",size:26,color:"7A2E5B"})],spacing:{before:240,after:120}});
   const multi=(t)=>String(t||"").split(/\n+/).filter(Boolean).map(l=>P(l));
   const kids=[];
   // cabeçalho: célula da logo (imagem ou espaço reservado) + nome e dados da clínica
@@ -233,11 +233,11 @@ async function prGerarDocx(f, v){
   const celLogo=new D.TableCell({width:{size:30,type:D.WidthType.PERCENTAGE},borders:logo?semBorda:{top:{style:D.BorderStyle.DASHED,size:4,color:"B8C4D6"},bottom:{style:D.BorderStyle.DASHED,size:4,color:"B8C4D6"},left:{style:D.BorderStyle.DASHED,size:4,color:"B8C4D6"},right:{style:D.BorderStyle.DASHED,size:4,color:"B8C4D6"}},verticalAlign:D.VerticalAlign.CENTER,
     children:[new D.Paragraph({alignment:D.AlignmentType.CENTER,children:logo?[logo]:[new D.TextRun({text:"Espaço para a logo da clínica",font:"Arial",size:16,color:"8A98AD"})]})]});
   const celNome=new D.TableCell({width:{size:70,type:D.WidthType.PERCENTAGE},borders:semBorda,verticalAlign:D.VerticalAlign.CENTER,children:[
-    new D.Paragraph({children:[new D.TextRun({text:clin.nome||"",bold:true,font:"Arial",size:28,color:"14213D"})]}),
+    new D.Paragraph({children:[new D.TextRun({text:clin.nome||"",bold:true,font:"Arial",size:28,color:"2A1424"})]}),
     ...[fx.cnpj?"CNPJ "+String(fx.cnpj).replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,"$1.$2.$3/$4-$5"):"",[clin.endereco,clin.telefone].filter(Boolean).join(" · ")].filter(Boolean).map(t=>new D.Paragraph({children:[new D.TextRun({text:t,font:"Arial",size:18,color:"4B5A73"})]}))]});
   kids.push(new D.Table({width:{size:100,type:D.WidthType.PERCENTAGE},borders:semBorda,rows:[new D.TableRow({height:{value:1100,rule:D.HeightRule.ATLEAST},children:[celLogo,celNome]})]}));
-  kids.push(new D.Paragraph({children:[],spacing:{after:120},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:"1E4FA3"}}}));
-  kids.push(new D.Paragraph({children:[new D.TextRun({text:titulos[f.tipo]||titulos.evolucao,bold:true,font:"Arial",size:32,color:"14213D"})],alignment:D.AlignmentType.CENTER,spacing:{before:240,after:240}}));
+  kids.push(new D.Paragraph({children:[],spacing:{after:120},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:"7A2E5B"}}}));
+  kids.push(new D.Paragraph({children:[new D.TextRun({text:titulos[f.tipo]||titulos.evolucao,bold:true,font:"Arial",size:32,color:"2A1424"})],alignment:D.AlignmentType.CENTER,spacing:{before:240,after:240}}));
   if(f.dest) kids.push(P("Para: "+f.dest));
   kids.push(H("Identificação"));
   kids.push(P("Paciente: "+p.nome+(idade?" · "+idade:"")+(p.nascimento?" · nascimento "+curto(p.nascimento)+"/"+p.nascimento.slice(0,4):"")));
@@ -278,7 +278,7 @@ async function prGerarDocx(f, v){
   kids.push(new D.Paragraph({children:[new D.TextRun({text:(clin.nome?clin.nome+", ":"")+fmtDia(hoje(),{day:"numeric",month:"long",year:"numeric"}),font:"Arial",size:22})],spacing:{before:480}}));
   kids.push(new D.Paragraph({children:[new D.TextRun({text:"_______________________________________",font:"Arial",size:22})],spacing:{before:480}}));
   kids.push(P((m.nome||"")+(m.registro?" · "+m.registro:"")));
-  kids.push(new D.Paragraph({children:[new D.TextRun({text:"Documento gerado pelo Rythmos. Confidencial: contém dados de saúde.",font:"Arial",size:16,color:"475569"})],spacing:{before:480}}));
+  kids.push(new D.Paragraph({children:[new D.TextRun({text:"Documento gerado pelo Rythmos. Confidencial: contém dados de saúde.",font:"Arial",size:16,color:"6B5560"})],spacing:{before:480}}));
   const doc=new D.Document({sections:[{properties:{page:{margin:{top:1134,bottom:1134,left:1134,right:1134}}},children:kids}]});
   const blob=await D.Packer.toBlob(doc);
   const nome=`${(titulos[f.tipo]||"Relatorio").split(" ")[0]}-${p.nome.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\W+/g,"-").replace(/^-|-$/g,"")}-${fim}.docx`;
