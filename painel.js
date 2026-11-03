@@ -1,4 +1,4 @@
-/* Rythmos — Painel da clínica (só a gestora): evolução das metas por área,
+/* Vincla — Painel da clínica (só a gestora): evolução das metas por área,
    metas estagnadas, crianças sem avaliação recente, visão por profissional. */
 "use strict";
 

@@ -1,4 +1,4 @@
-/* Rythmos — Jogos para usar na sessão (tablet com a criança).
+/* Vincla — Jogos para usar na sessão (tablet com a criança).
    Regras de desenho: sem cronômetro, sem piscar, sem punição; toques grandes;
    som só se a terapeuta ligar; fim de rodada com registro opcional na evolução. */
 "use strict";

@@ -29,7 +29,7 @@ Essas regras ficam no banco de dados (Supabase), não só na tela. Mesmo alguém
 ## Como colocar no ar
 
 ### 1. Supabase (banco e login)
-1. Em [supabase.com](https://supabase.com), crie um projeto chamado `rythmos`, na região **South America (São Paulo)**. Guarde a senha do banco.
+1. Em [supabase.com](https://supabase.com), crie um projeto chamado `vincla`, na região **South America (São Paulo)**. Guarde a senha do banco.
 2. No menu da esquerda, abra **SQL Editor** → **New query**. Cole todo o conteúdo do arquivo `supabase/schema.sql` e clique em **Run**. Deve aparecer "Success".
 3. Abra **Authentication** → **Sign In / Providers** → **Email** e **desligue "Confirm email"**. O envio de e-mails que vem com o Supabase só entrega para quem faz parte da sua equipe no Supabase, no máximo 2 por hora. Sem desligar, as profissionais não recebem o link de confirmação. O "Esqueci a senha" também depende de e-mail: para ele funcionar para todo mundo, configure um serviço de e-mail próprio em **Authentication** → **Emails** → **SMTP** (o Resend tem plano gratuito). Enquanto isso não estiver configurado, quem esquecer a senha precisa criar uma conta nova e pedir acesso de novo.
 4. Abra **Project Settings** → **API** (ou **Data API**). Copie a **Project URL** e a chave **anon public** (às vezes aparece como **publishable**).
@@ -40,7 +40,7 @@ Essas regras ficam no banco de dados (Supabase), não só na tela. Mesmo alguém
    Nunca cole ali a chave `service_role` ou `secret`.
 
 ### 3. Vercel (endereço do app)
-Domínios do Rythmos (projeto do app → Settings → Domains): `app.rythmosapp.com.br` e `admin.rythmosapp.com.br`. O `vercel.json` faz o `admin.` abrir a administração (`admin.html`) e o `app.` abrir o app da clínica. Na Hostinger (zona DNS): `A @ → 76.76.21.21`, `CNAME www → cname.vercel-dns.com`, `CNAME app → cname.vercel-dns.com`, `CNAME admin → cname.vercel-dns.com`. O site de vendas fica no projeto `rythmos-site`, com `rythmosapp.com.br` e `www`.
+Domínios do Vincla (projeto do app → Settings → Domains): `app.rythmosapp.com.br` e `admin.rythmosapp.com.br`. O `vercel.json` faz o `admin.` abrir a administração (`admin.html`) e o `app.` abrir o app da clínica. Na Hostinger (zona DNS): `A @ → 76.76.21.21`, `CNAME www → cname.vercel-dns.com`, `CNAME app → cname.vercel-dns.com`, `CNAME admin → cname.vercel-dns.com`. O site de vendas fica no projeto `vincla-site`, com `rythmosapp.com.br` e `www`.
 1. Em [vercel.com](https://vercel.com), entre com a mesma conta do GitHub. Clique em **Add New** → **Project** e importe o repositório.
 2. Em **Framework Preset**, escolha **Other** e clique em **Deploy**. Não precisa configurar mais nada.
 3. Copie o endereço que a Vercel criar (algo como `sessio-xxxx.vercel.app`).
@@ -172,7 +172,7 @@ No fim da rodada, "Registrar na evolução" anota acertos, tentativas e tempo (o
 O e-mail que vem com o Supabase só entrega para a equipe do projeto. Para a clínica inteira receber confirmação de conta e link de nova senha:
 1. Crie uma conta gratuita em [resend.com](https://resend.com) (3.000 e-mails/mês). Em **Domains**, adicione seu domínio e crie na Hostinger os registros DNS que ele mostrar (TXT e MX). Espere ficar "Verified".
 2. Em **API Keys**, crie uma chave.
-3. No Supabase: **Authentication → Emails → SMTP Settings** → ligue "Enable Custom SMTP": Host `smtp.resend.com`, Port `465`, User `resend`, Password = a chave, Sender `nao-responda@seudominio.com.br`, Sender name `Rythmos`.
+3. No Supabase: **Authentication → Emails → SMTP Settings** → ligue "Enable Custom SMTP": Host `smtp.resend.com`, Port `465`, User `resend`, Password = a chave, Sender `nao-responda@seudominio.com.br`, Sender name `Vincla`.
 4. Em **Authentication → Sign In / Providers → Email**, ligue de volta **Confirm email**. Em **URL Configuration**, confira Site URL e Redirect URLs com o endereço do app.
 5. Teste: crie uma conta nova e peça "Esqueci a senha".
 
@@ -182,12 +182,12 @@ Em **Conta**, qualquer pessoa ativa a verificação em duas etapas: lê um QR co
 ### Auditoria
 Toda criação, alteração ou exclusão em pacientes, terapias, sessões, evoluções, pagamentos, prontuários, metas, documentos e equipe vira uma linha na tabela `auditoria`, gravada pelo próprio banco (ninguém consegue apagar ou editar pelo app). Abrir um prontuário, gerar relatório e exportar dados também ficam registrados. A gestora vê tudo em **Clínica → Auditoria**, com busca e CSV.
 
-### Assinaturas e administração do Rythmos
+### Assinaturas e administração do Vincla
 Cada clínica tem uma assinatura (`assinaturas`): plano, situação (teste / ativa / atrasada / bloqueada / cancelada), teste até, pago até, valor. Ao criar a clínica, ela entra em **teste por 30 dias**. A gestora vê a situação em **Clínica → Dados**.
 - **atrasada**: aviso na Agenda da gestora; o app continua funcionando.
 - **bloqueada / cancelada**: a equipe vê "Assinatura suspensa"; a gestora ainda consegue **exportar tudo**.
 
-A administração do Rythmos (você) fica **fora do app das clínicas**, no endereço `/admin.html` (ex.: `app.rythmos.com.br/admin.html`), com login próprio. Lá aparecem todas as clínicas: equipe, pacientes, sessões em 30 dias, último uso, plano, situação e receita mensal (MRR). Tocar na clínica edita a assinatura. Para virar administradora, rode no SQL Editor (uma vez, com o seu e-mail):
+A administração do Vincla (você) fica **fora do app das clínicas**, no endereço `/admin.html` (ex.: `app.vincla.com.br/admin.html`), com login próprio. Lá aparecem todas as clínicas: equipe, pacientes, sessões em 30 dias, último uso, plano, situação e receita mensal (MRR). Tocar na clínica edita a assinatura. Para virar administradora, rode no SQL Editor (uma vez, com o seu e-mail):
 ```sql
 insert into public.admins(user_id, nome) select id, 'Maria Helena' from auth.users where email = 'seu@email.com';
 ```
@@ -211,16 +211,16 @@ Em **Conta → Aparência** cada pessoa escolhe Automático (segue o aparelho), 
 
 ## Página de vendas (site)
 
-A página do Rythmos é um arquivo só, `index.html` (do `rythmos-site.zip`), com as imagens embutidas. Duas formas de publicar:
+A página do Vincla é um arquivo só, `index.html` (do `vincla-site.zip`), com as imagens embutidas. Duas formas de publicar:
 
-- **Vercel (recomendado):** crie um repositório `rythmos-site` no GitHub só com esse `index.html`, importe na Vercel (preset "Other") e em Settings → Domains aponte `rythmos.com.br` (ou o domínio que escolher). O app fica em `app.rythmos.com.br`, no projeto que já existe.
+- **Vercel (recomendado):** crie um repositório `vincla-site` no GitHub só com esse `index.html`, importe na Vercel (preset "Other") e em Settings → Domains aponte `vincla.com.br` (ou o domínio que escolher). O app fica em `app.vincla.com.br`, no projeto que já existe.
 - **Hostinger:** no hPanel → Gerenciador de arquivos → `public_html`, envie o `index.html`. O domínio já aponta para lá.
 
 Para trocar textos, edite o `index.html` em qualquer editor; o formulário "Pedir demonstração" monta a mensagem e copia para o WhatsApp — troque o número no final do arquivo (`(82) 9 0000-0000`).
 
 ## App no celular
 
-O Rythmos é um **PWA** (app web instalável). Não precisa de loja nem de versão separada: o mesmo endereço da Vercel vira app no celular, com ícone na tela inicial e abrindo em tela cheia, sem a barra do navegador. Os dados continuam vindo do Supabase ao vivo; só a "casca" do app fica guardada no aparelho para abrir rápido.
+O Vincla é um **PWA** (app web instalável). Não precisa de loja nem de versão separada: o mesmo endereço da Vercel vira app no celular, com ícone na tela inicial e abrindo em tela cheia, sem a barra do navegador. Os dados continuam vindo do Supabase ao vivo; só a "casca" do app fica guardada no aparelho para abrir rápido.
 
 **Como cada pessoa instala (uma vez, leva 20 segundos):**
 - **Android (Chrome):** ao abrir o endereço, o próprio app mostra o aviso "Instalar". Se não aparecer, menu ⋮ → **Instalar aplicativo** (ou "Adicionar à tela inicial").
@@ -231,12 +231,12 @@ Quem já instalou recebe as atualizações sozinho: na próxima vez que abrir co
 
 **Se quiser colocar na Play Store** (opcional, para a clínica achar na loja): o [PWABuilder](https://www.pwabuilder.com) gera o pacote Android a partir do endereço do app, e a conta de desenvolvedor Google custa US$ 25 uma vez. Na App Store da Apple é mais caro (US$ 99/ano) e exige um projeto nativo; para clínicas, a instalação pelo Safari resolve.
 
-Arquivos envolvidos: `manifest.json` (nome, cores e ícones), `sw.js` (cache da casca do app), `icons/` (ícones gerados a partir do símbolo do Rythmos) e as tags no `index.html`.
+Arquivos envolvidos: `manifest.json` (nome, cores e ícones), `sw.js` (cache da casca do app), `icons/` (ícones gerados a partir do símbolo do Vincla) e as tags no `index.html`.
 
 ## Arquivos
 
 - `vercel.json`: liga `admin.rythmosapp.com.br` à página de administração e põe cabeçalhos de segurança.
-- `admin.html`: a página da administração do Rythmos (mesmo código, modo admin).
+- `admin.html`: a página da administração do Vincla (mesmo código, modo admin).
 - `index.html`, `styles.css`, `app.js`, `jogos.js`, `prontuario.js`, `painel.js`, `agenda.js`, `admin.js`: o app. Roda direto no navegador, sem etapa de build.
 - `config.js`: endereço e chave pública do Supabase.
 - `manifest.json`, `sw.js`, `icons/`: o que faz o app ser instalável no celular.

@@ -5,7 +5,7 @@ with sync_playwright() as pw:
     for role,me in [('dona','u-dona'),('profissional','u-livia')]:
         p=b.new_page(viewport={'width':1000,'height':900});p.on('pageerror',lambda e:errs.append(str(e)))
         p.route('**/supabase.js',lambda rq,*_a,rl=role,mm=me:rq.fulfill(body=f'window.__ROLE="{rl}";window.__ME="{mm}";'+open('mock.js').read(),content_type='text/javascript'))
-        p.route('**/config.js',lambda rq,*_a:rq.fulfill(body='window.RYTHMOS_CONFIG={SUPABASE_URL:"https://x.supabase.co",SUPABASE_ANON_KEY:"k"}',content_type='text/javascript'))
+        p.route('**/config.js',lambda rq,*_a:rq.fulfill(body='window.VINCLA_CONFIG={SUPABASE_URL:"https://x.supabase.co",SUPABASE_ANON_KEY:"k"}',content_type='text/javascript'))
         p.route('**/xlsx.full.min.js',lambda rq,*_a:rq.fulfill(body='',content_type='text/javascript'))
         p.goto('http://127.0.0.1:8765/index.html');p.wait_for_timeout(1500)
         print(role,'tabs:',p.evaluate('[...document.querySelectorAll(".tab")].map(t=>t.dataset.tab)'))

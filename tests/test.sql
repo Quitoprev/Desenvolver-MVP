@@ -153,10 +153,10 @@ select (meu_status()->'assinatura'->>'status') as assinatura_status, (meu_status
 insert into auditoria(clinica_id, acao, tabela) values (minha_clinica(),'x','y');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
 select count(*) as livia_auditoria from auditoria;
--- admin do Rythmos
+-- admin do Vincla
 reset role;
 insert into auth.users(id) values ('00000000-0000-0000-0000-00000000000f') on conflict do nothing;
-insert into admins(user_id, nome) values ('00000000-0000-0000-0000-00000000000f','Admin Rythmos');
+insert into admins(user_id, nome) values ('00000000-0000-0000-0000-00000000000f','Admin Vincla');
 set role authenticated;
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000f');
 select json_array_length(admin_clinicas()) as admin_ve_clinicas, (admin_clinicas()->0->>'pacientes')::int > 0 as com_pacientes;

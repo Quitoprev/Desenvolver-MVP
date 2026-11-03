@@ -1,4 +1,4 @@
-/* Rythmos — app da clínica. Sem etapa de build: este arquivo roda direto no navegador.
+/* Vincla — app da clínica. Sem etapa de build: este arquivo roda direto no navegador.
    Quem protege os dados é o banco (supabase/schema.sql); o app só mostra o que o banco entrega. */
 "use strict";
 
@@ -10,7 +10,7 @@ const funcaoDe=m=>m.papel==="recepcao"?"Recepcionista":(m.especialidade||"");
 const selFuncao=(id,name,v,extra)=>`<select id="${id}" name="${name}" ${extra||""}><option value="">Escolha…</option>${FUNCOES.map(f=>`<option ${f===v?"selected":""}>${f}</option>`).join("")}</select>`;
 const STATUS = {agendada:"Agendada",confirmada:"Confirmada",presente:"Presente",falta:"Falta",desmarcada:"Desmarcada"};
 const SITUACAO = {ativo:"Ativo",fila:"Na fila",pausado:"Pausado",alta:"Alta"};
-const MODO_ADMIN = window.RYTHMOS_MODO==="admin"; // admin.html: painel da administração do Rythmos, fora das clínicas
+const MODO_ADMIN = window.VINCLA_MODO==="admin"; // admin.html: painel da administração do Vincla, fora das clínicas
 const FISCAL_ATIVO = false; // módulo fiscal (Receita Saúde, NFS-e, contador) guardado por enquanto
 const PAPEL = {dona:"Gestora",recepcao:"Recepção",profissional:"Profissional",admin:"Administração"};
 const FORMAS = ["Pix","Dinheiro","Cartão de débito","Cartão de crédito","Transferência"];
@@ -64,7 +64,7 @@ function errMsg(e){
 function fail(e){console.error(e);toast(errMsg(e))}
 
 /* ================= Supabase ================= */
-const CFG=window.RYTHMOS_CONFIG||window.SESSIO_CONFIG||window.ORBITA_CONFIG||window.LUMO_CONFIG||{};
+const CFG=window.VINCLA_CONFIG||window.RYTHMOS_CONFIG||window.SESSIO_CONFIG||window.ORBITA_CONFIG||window.LUMO_CONFIG||{};
 const configurado=CFG.SUPABASE_URL&&/^https:\/\//.test(CFG.SUPABASE_URL)&&CFG.SUPABASE_ANON_KEY&&!/COLE_AQUI/.test(CFG.SUPABASE_ANON_KEY);
 const sb=configurado&&window.supabase?window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY):null;
 async function run(p){const{data,error}=await p;if(error)throw error;return data}
@@ -73,8 +73,8 @@ async function fetchAll(build){let out=[],from=0;const step=1000;for(;;){const{d
 /* ================= estado ================= */
 const S={
   user:null, me:null, clinica:{}, membros:[], pac:[], vin:[], ses:[], evo:{}, pag:{}, cic:{},
-  tab:lsGet("rythmos.tab")||"agenda", dia:hoje(), uniMes:ymOf(hoje()), cxMes:ymOf(hoje()),
-  prof:lsGet("rythmos.prof")||"", busca:"", filtroSit:"ativo", envio:null, loaded:false, lastLoad:0,
+  tab:lsGet("vincla.tab")||"agenda", dia:hoje(), uniMes:ymOf(hoje()), cxMes:ymOf(hoje()),
+  prof:lsGet("vincla.prof")||"", busca:"", filtroSit:"ativo", envio:null, loaded:false, lastLoad:0,
   fxMes:ymOf(hoje()), fxSub:"receita", notas:[], reunioes:[], rec:null, semIni:segunda(hoje()),
   extra:{} // caixa de meses fora da janela carregada
 };
@@ -122,8 +122,8 @@ async function loadAll(){
 
 /* ================= entrada (login, clínica, aprovação) ================= */
 function gate(html){$("app").hidden=true;const g=$("gate");g.hidden=false;g.innerHTML=html}
-const LOGO=`<svg class="mark" viewBox="0 0 60 40" aria-hidden="true"><path class="mk-line" d="M5 29 C12 29 13 20 20 20 C27 20 28 27 35 25 C41 23 42 14 46 12" fill="none" stroke-width="5" stroke-linecap="round"/><circle class="mk-dot" cx="53" cy="10" r="6"/></svg>`;
-function gateBrand(){return`<div class="brand">${LOGO}<span class="word">rythmos</span></div>`}
+const LOGO=`<svg class="mark" viewBox="0 0 120 120" aria-hidden="true"><circle class="mk-a" cx="60" cy="44" r="26"/><circle class="mk-b" cx="44" cy="72" r="26"/><circle class="mk-c" cx="76" cy="72" r="26"/><circle class="mk-dot" cx="60" cy="63" r="5"/></svg>`;
+function gateBrand(){return`<div class="brand">${LOGO}<span class="word">vincla</span></div>`}
 
 function telaConfig(){
   gate(`<div class="card">${gateBrand()}<h2>Falta conectar o banco</h2>
@@ -168,7 +168,7 @@ function telaNovaSenha(){
 
 function telaOnboarding(){
   gate(`<div style="display:flex;flex-direction:column;gap:16px;align-items:center;width:100%">
-  <div class="card" style="max-width:820px">${gateBrand()}<div><h2>Bem-vinda ao Rythmos</h2><p class="note">Sua conta (${esc(S.user.email)}) ainda não está em nenhuma clínica.</p></div></div>
+  <div class="card" style="max-width:820px">${gateBrand()}<div><h2>Bem-vinda ao Vincla</h2><p class="note">Sua conta (${esc(S.user.email)}) ainda não está em nenhuma clínica.</p></div></div>
   <div class="cards2">
     <form class="card" id="fEntrar"><h2>Entrar na clínica</h2><p class="note">Para profissionais e recepção. Peça o código à gestora da clínica.</p>
       <div class="f"><label for="o_cod">Código da clínica</label><input id="o_cod" name="codigo" required autocapitalize="characters" maxlength="12" style="text-transform:uppercase;letter-spacing:.15em"></div>
@@ -193,7 +193,7 @@ function telaAguardando(){
   $("gAtual").onclick=iniciar;$("gSair").onclick=sair;
 }
 
-function telaNaoAdmin(){gate(`<div class="card">${gateBrand()}<h2>Área da administração do Rythmos</h2><p>Esta conta não é da administração. Se você é da equipe de uma clínica, use o endereço do app da clínica.</p><div class="toolbar"><button class="btn" id="gSair">Sair</button></div></div>`);$("gSair").onclick=sair}
+function telaNaoAdmin(){gate(`<div class="card">${gateBrand()}<h2>Área da administração do Vincla</h2><p>Esta conta não é da administração. Se você é da equipe de uma clínica, use o endereço do app da clínica.</p><div class="toolbar"><button class="btn" id="gSair">Sair</button></div></div>`);$("gSair").onclick=sair}
 async function sair(){try{await sb.auth.signOut()}catch{}S.me=null;S.user=null;telaLogin("entrar")}
 
 let iniciando=false;
@@ -229,7 +229,7 @@ function tabs(){
 }
 function render(){
   if($("app").hidden)return;
-  $("clinicName").textContent=S.me?(S.adminSolo?"Administração do Rythmos":(S.clinica.nome||S.me.clinica)+" · "+(isProf()?S.me.nome:PAPEL[papel()])):"";
+  $("clinicName").textContent=S.me?(S.adminSolo?"Administração do Vincla":(S.clinica.nome||S.me.clinica)+" · "+(isProf()?S.me.nome:PAPEL[papel()])):"";
   $("btnClinica").hidden=!isDona()||!!S.adminSolo;
   const lg=$("clinicLogo");if(S.clinica.logo){lg.src=S.clinica.logo;lg.hidden=false}else lg.hidden=true;
   document.body.classList.toggle("temLogo",!!S.clinica.logo&&!S.adminSolo);
@@ -655,7 +655,7 @@ function vFiscal(){
 function agrupar(L){const g={};for(const x of L){const k=x.s.paciente_id+"|"+x.s.profissional_id;(g[k]=g[k]||{p:x.p,m:x.m,itens:[]}).itens.push(x)}return Object.values(g).sort((a,b)=>byNome(a.p,b.p))}
 function vReceitaSaude(pf){
   const mostrarProf=isEquipe()&&!S.prof;
-  let h=`<p class="note">Sessões particulares pagas a profissionais autônomas. Desde 2025, o recibo é obrigatório pelo app <b>Receita Saúde</b> (gov.br), em nome da própria profissional. O Rythmos prepara o que lançar e marca o que já foi emitido.</p>`;
+  let h=`<p class="note">Sessões particulares pagas a profissionais autônomas. Desde 2025, o recibo é obrigatório pelo app <b>Receita Saúde</b> (gov.br), em nome da própria profissional. O Vincla prepara o que lançar e marca o que já foi emitido.</p>`;
   if(!pf.length)return h+'<div class="empty"><strong>Nada a lançar neste mês</strong><span>Aparecem aqui as sessões pagas de profissionais que recebem como pessoa física (Equipe → "Quem recebe").</span></div>';
   for(const g of agrupar(pf)){
     const pend=g.itens.filter(x=>!x.pg.receita_saude_em),tot=g.itens.reduce((a,x)=>a+x.valor,0);
@@ -670,7 +670,7 @@ function vReceitaSaude(pf){
 function vNotas(cl,M){
   const mostrarProf=isEquipe()&&!S.prof;
   const fx=S.clinica.fiscal||{},cfgOk=fx.cnpj&&fx.inscricao_municipal&&fx.codigo_municipio;
-  let h=`<p class="note">Sessões particulares pagas à clínica (CNPJ). A nota fiscal de serviço (NFS-e) é emitida pelo Rythmos em nome da clínica${fx.ambiente==="producao"?"":", <b>em ambiente de testes</b> até você ligar a produção em Clínica → Fiscal"}.</p>`;
+  let h=`<p class="note">Sessões particulares pagas à clínica (CNPJ). A nota fiscal de serviço (NFS-e) é emitida pelo Vincla em nome da clínica${fx.ambiente==="producao"?"":", <b>em ambiente de testes</b> até você ligar a produção em Clínica → Fiscal"}.</p>`;
   if(isDona()&&!cfgOk)h+=`<div class="phase warn"><span>Antes de emitir, preencha os dados fiscais da clínica (CNPJ, inscrição municipal, município).</span><button class="btn" data-act="abrirClinica" data-sub="fiscal">Preencher</button></div>`;
   const semNota=cl.filter(x=>!x.pg.nota_id);
   if(semNota.length){
@@ -714,7 +714,7 @@ function exportCsv(M){
   const rows=L.sort((a,b)=>(a.s.data+a.s.hora).localeCompare(b.s.data+b.s.hora)).map(x=>{const n=x.pg.nota_id?notaDe(x.pg.nota_id):null;const pct=Number(x.m.repasse_pct||0);
     return[curto(x.s.data)+"/"+x.s.data.slice(0,4),hhmm(x.s.hora),x.p.nome,x.p.nome_pagador||x.p.responsavel||"",cpfFmt(x.p.cpf_pagador),x.m.nome||"",cpfFmt(x.m.cpf),x.m.registro||"",x.via==="pf"?"Profissional (PF)":"Clínica (CNPJ)",x.s.terapia||"",x.valor.toFixed(2).replace(".",","),x.pg.forma||"",x.pg.pago_em?curto(x.pg.pago_em)+"/"+x.pg.pago_em.slice(0,4):"",x.via==="pf"?"Receita Saúde":"NFS-e",n?(n.numero||n.status):"",x.pg.receita_saude_em?curto(x.pg.receita_saude_em)+"/"+x.pg.receita_saude_em.slice(0,4):"",pct?String(pct).replace(".",","):"0",(x.valor*pct/100).toFixed(2).replace(".",",")]});
   const csv="\ufeff"+[cab,...rows].map(r=>r.map(esc2).join(";")).join("\r\n");
-  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=`rythmos-${(S.clinica.nome||"clinica").replace(/\W+/g,"-").toLowerCase()}-${M}.csv`;document.body.appendChild(a);a.click();a.remove();
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=`vincla-${(S.clinica.nome||"clinica").replace(/\W+/g,"-").toLowerCase()}-${M}.csv`;document.body.appendChild(a);a.click();a.remove();
 }
 function dadosRS(k){const[pid,uid]=k.split("|");const L=(fxDados(S.fxMes)||[]).filter(x=>x.via==="pf"&&x.s.paciente_id===pid&&x.s.profissional_id===uid);return{pid,uid,L}}
 async function nfseCall(body){const{data,error}=await sb.functions.invoke("nfse",{body});if(error){let m=error.message;try{const j=await error.context.json();if(j&&j.erro)m=j.erro}catch{}throw new Error(m)}if(data&&data.erro)throw new Error(data.erro);return data}
@@ -753,7 +753,7 @@ function md(t){ // Markdown simples e seguro: títulos, negrito, listas e tabela
 }
 function vReunioes(){
   let h=`<div><div class="eyebrow">Só você vê esta aba</div><h2>Reuniões e atas</h2></div>
-  <p class="note">Grave a reunião ao vivo ou envie uma gravação. O Rythmos transcreve, gera a ata com pauta, decisões e encaminhamentos, e você revisa antes de guardar. Pacientes aparecem só pelas iniciais, e o áudio é apagado depois da transcrição.</p>`;
+  <p class="note">Grave a reunião ao vivo ou envie uma gravação. O Vincla transcreve, gera a ata com pauta, decisões e encaminhamentos, e você revisa antes de guardar. Pacientes aparecem só pelas iniciais, e o áudio é apagado depois da transcrição.</p>`;
   if(!S.reunioes.length)return h+'<div class="empty"><strong>Nenhuma reunião ainda</strong><span>Toque em Nova reunião. Na reunião de equipe, deixe o celular sobre a mesa gravando.</span></div>';
   h+='<div class="list">';
   for(const r of S.reunioes){const[cls,lbl]=REU_ST[r.status]||["p-mute",r.status];
@@ -1087,7 +1087,7 @@ function sheetSessao(s,presetVin){
     $("fSes").onsubmit=async e=>{
       e.preventDefault();const d=Object.fromEntries(new FormData(e.target));const n=Number(d.repetir||1);
       const rows=Array.from({length:n},(_,i)=>({vinculo_id:d.vinculo_id,data:addDays(d.data,7*i),hora:d.hora,status:"agendada"}));
-      try{await run(sb.from("sessoes").insert(rows));S.dia=d.data;closeSheet();toast(n>1?`${n} sessões agendadas`:"Sessão agendada");S.tab="agenda";lsSet("rythmos.tab","agenda");reload(["ses"])}catch(err){fail(err)}
+      try{await run(sb.from("sessoes").insert(rows));S.dia=d.data;closeSheet();toast(n>1?`${n} sessões agendadas`:"Sessão agendada");S.tab="agenda";lsSet("vincla.tab","agenda");reload(["ses"])}catch(err){fail(err)}
     };
     return;
   }
@@ -1146,7 +1146,7 @@ function sheetClinica(sub){
   let body="";
   if(clinicaSub==="equipe"){
     const pend=S.membros.filter(m=>!m.ativo),ativos=S.membros.filter(m=>m.ativo).sort(byNome);
-    body=`<div class="list"><div class="urow"><div><div class="eyebrow">Código para entrar na clínica</div><div class="code">${esc(S.clinica.codigo_convite||"")}</div><p class="note">Quem vai usar o Rythmos cria a conta, escolhe "Entrar na clínica" e digita este código. Depois você aprova aqui.</p></div>
+    body=`<div class="list"><div class="urow"><div><div class="eyebrow">Código para entrar na clínica</div><div class="code">${esc(S.clinica.codigo_convite||"")}</div><p class="note">Quem vai usar o Vincla cria a conta, escolhe "Entrar na clínica" e digita este código. Depois você aprova aqui.</p></div>
       <div style="display:flex;flex-direction:column;gap:6px"><button type="button" class="btn" data-act="copyCode">Copiar</button><button type="button" class="btn" data-act="novoCodigo">Trocar código</button></div></div></div>
     ${pend.length?`<div><div class="eyebrow" style="margin-bottom:6px">Pedidos de acesso</div><div class="list">${pend.map(m=>`<div class="urow"><div><div class="name">${esc(m.nome)}</div><div class="sub">${funcaoDe(m)?esc(funcaoDe(m))+" · ":""}Pediu acesso em ${esc(new Date(m.criado_em).toLocaleDateString("pt-BR"))}</div></div><span></span>
       <div class="acts">${selFuncao("ap_"+m.user_id,"funcao",funcaoDe(m),'aria-label="Função de '+esc(m.nome)+'" style="border:1px solid var(--line);border-radius:10px;padding:7px;background:var(--bg)"')}<button type="button" class="btn primary" data-act="aprovar" data-id="${m.user_id}">Aprovar</button><button type="button" class="btn danger" data-act="recusar" data-id="${m.user_id}">Recusar</button></div></div>`).join("")}</div></div>`:""}
@@ -1189,12 +1189,12 @@ function sheetClinica(sub){
       <div class="foot"><div class="r"><button class="btn primary" type="submit">Salvar</button></div></div></form>`;
   }else{
     const temEx=S.pac.some(p=>p.exemplo);
-    body=`<div class="empty"><strong>Dados de exemplo</strong><span>Cria 5 pacientes fictícios atendidos por você, com sessões, um pagamento e o ciclo da Unimed, para mostrar o Rythmos funcionando. Eles aparecem marcados como exemplo.</span>
+    body=`<div class="empty"><strong>Dados de exemplo</strong><span>Cria 5 pacientes fictícios atendidos por você, com sessões, um pagamento e o ciclo da Unimed, para mostrar o Vincla funcionando. Eles aparecem marcados como exemplo.</span>
       <div class="toolbar" style="justify-content:center"><button type="button" class="btn primary" data-act="carregarEx">Carregar exemplos</button>${temEx?'<button type="button" class="btn danger" data-act="apagarEx">Apagar exemplos</button>':""}</div></div>`;
   }
   if(clinicaSub==="auditoria"){ body='<div id="audBox"><div class="empty"><span>Carregando…</span></div></div>'; audCarregar().then(()=>{const b=$("audBox");if(b)b.innerHTML=audHtml()}); }
   if(clinicaSub==="dados"){ const a=(typeof assinatura==="function"&&assinatura())||{}; body=`<div class="list"><div class="urow"><div><div class="eyebrow">Assinatura</div><p>${a.status?`Plano <b>${esc(a.plano||"")}</b> · situação <b>${esc(a.status)}</b>${a.status==="teste"&&a.teste_ate?" · teste até "+esc(curto(a.teste_ate))+"/"+a.teste_ate.slice(0,4):a.pago_ate?" · pago até "+esc(curto(a.pago_ate))+"/"+a.pago_ate.slice(0,4):""}`:"Sem assinatura registrada."}</p></div></div>
-    <div class="urow"><div><div class="eyebrow">Seus dados são seus</div><p class="note">Baixe tudo que a clínica tem no Rythmos: pacientes, terapias, sessões, evoluções, pagamentos, Unimed, prontuários, metas, documentos anexados e equipe, em CSV (Excel) e JSON, num único .zip. Pode fazer quando quiser, inclusive para sair do Rythmos.</p><div class="toolbar" style="margin-top:8px"><button type="button" class="btn primary" data-act="exportarTudo">Exportar tudo (.zip)</button></div></div></div></div>`; }
+    <div class="urow"><div><div class="eyebrow">Seus dados são seus</div><p class="note">Baixe tudo que a clínica tem no Vincla: pacientes, terapias, sessões, evoluções, pagamentos, Unimed, prontuários, metas, documentos anexados e equipe, em CSV (Excel) e JSON, num único .zip. Pode fazer quando quiser, inclusive para sair do Vincla.</p><div class="toolbar" style="margin-top:8px"><button type="button" class="btn primary" data-act="exportarTudo">Exportar tudo (.zip)</button></div></div></div></div>`; }
   openSheet(`<header><h2>${esc(S.clinica.nome||"Clínica")}</h2><button type="button" class="iconbtn" data-act="close">Fechar</button></header>
   <div class="subtabs"><button type="button" data-act="clinSub" data-v="equipe" ${st("equipe")}>Equipe</button><button type="button" data-act="clinSub" data-v="mensagens" ${st("mensagens")}>Mensagens</button>${FISCAL_ATIVO?`<button type="button" data-act="clinSub" data-v="fiscal" ${st("fiscal")}>Fiscal</button>`:""}<button type="button" data-act="clinSub" data-v="importar" ${st("importar")}>Importar</button><button type="button" data-act="clinSub" data-v="auditoria" ${st("auditoria")}>Auditoria</button><button type="button" data-act="clinSub" data-v="dados" ${st("dados")}>Dados</button><button type="button" data-act="clinSub" data-v="exemplos" ${st("exemplos")}>Exemplos</button></div>${body}`);
   const fl=$("logoFile");if(fl)fl.onchange=()=>trocarLogo(fl.files[0]);
@@ -1243,11 +1243,11 @@ function sheetConta(){
     try{await run(sb.from("membros").update({nome:d.nome,cpf:cpfD||null,registro:d.registro||null}).eq("user_id",meuId()));S.me.nome=d.nome;await reload(["membros"]);closeSheet();toast("Conta atualizada")}catch(err){fail(err)}};
 }
 
-function temaAtual(){try{return localStorage.getItem("rythmos.tema")||"auto"}catch(e){return "auto"}}
+function temaAtual(){try{return localStorage.getItem("vincla.tema")||localStorage.getItem("rythmos.tema")||"auto"}catch(e){return "auto"}}
 function aplicarTema(v){ if(v==="light"||v==="dark") document.documentElement.setAttribute("data-theme",v); else document.documentElement.removeAttribute("data-theme");
   const mt=document.querySelector('meta[name="theme-color"]'); if(mt) mt.content=v==="dark"||(v!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches)?"#1C0E18":"#7A2E5B"; }
 aplicarTema(temaAtual());
-(function(){ const dsn=CFG&&CFG.SENTRY_DSN; if(!dsn) return; const sc=document.createElement("script"); sc.src="https://browser.sentry-cdn.com/8.30.0/bundle.min.js"; sc.crossOrigin="anonymous"; sc.onload=()=>{ try{ window.Sentry.init({dsn,release:"rythmos",environment:location.hostname,sendDefaultPii:false,beforeSend(ev){ if(ev.user) delete ev.user; return ev; }}); }catch(e){} }; document.head.appendChild(sc); })();
+(function(){ const dsn=CFG&&CFG.SENTRY_DSN; if(!dsn) return; const sc=document.createElement("script"); sc.src="https://browser.sentry-cdn.com/8.30.0/bundle.min.js"; sc.crossOrigin="anonymous"; sc.onload=()=>{ try{ window.Sentry.init({dsn,release:"vincla",environment:location.hostname,sendDefaultPii:false,beforeSend(ev){ if(ev.user) delete ev.user; return ev; }}); }catch(e){} }; document.head.appendChild(sc); })();
 
 /* ================= ações ================= */
 async function acao(a,t){
@@ -1256,7 +1256,7 @@ async function acao(a,t){
     case"close":return closeSheet();
     case"dia":S.dia=addDays(S.dia,Number(t.dataset.n));return render();
     case"hoje":S.dia=hoje();return render();
-    case"tema":{const v=t.dataset.v;try{localStorage.setItem("rythmos.tema",v)}catch(e){}aplicarTema(v);document.querySelectorAll('[data-act="tema"]').forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===v)));return;}
+    case"tema":{const v=t.dataset.v;try{localStorage.setItem("vincla.tema",v)}catch(e){}aplicarTema(v);document.querySelectorAll('[data-act="tema"]').forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===v)));return;}
     case"mes":S.uniMes=addMonths(S.uniMes,Number(t.dataset.n));return render();
     case"mesAtual":S.uniMes=ymOf(hoje());return render();
     case"cx":S.cxMes=addMonths(S.cxMes,Number(t.dataset.n));return render();
@@ -1301,7 +1301,7 @@ async function acao(a,t){
     case"semFeito":S.envioSem.feitos++;setTimeout(()=>{S.envioSem.i++;stepSemana()},350);return;
     case"confFam":{const g=semanaDados(S.semIni).lista.find(x=>x.p.id===id);if(!g)return;t.disabled=true;try{await run(sb.from("sessoes").update({status:"confirmada"}).in("id",g.pend.map(s=>s.id)));toast("Semana confirmada");closeSheet()}catch(e){fail(e)}return reload(["ses"])}
     case"naoVem":return confirmInline(t,"Desmarcar as pendentes?",async()=>{const g=semanaDados(S.semIni).lista.find(x=>x.p.id===id);if(!g)return;try{await run(sb.from("sessoes").update({status:"desmarcada"}).in("id",g.pend.map(s=>s.id)));toast("Sessões desmarcadas; o horário fica livre para a fila")}catch(e){fail(e)}reload(["ses"])});
-    case"irUnimed":S.tab="unimed";lsSet("rythmos.tab","unimed");S.uniMes=ymOf(hoje());render();window.scrollTo(0,0);return;
+    case"irUnimed":S.tab="unimed";lsSet("vincla.tab","unimed");S.uniMes=ymOf(hoje());render();window.scrollTo(0,0);return;
     case"envPular":S.envio.i++;return stepDisparo();
     case"envFeito":{const q=S.envio,vid=q.ids[q.i];q.feitos++;writeCyc(vid,S.uniMes,{msg_em:new Date().toISOString()}).catch(fail);setTimeout(()=>{q.i++;stepDisparo()},350);return}
     case"pedidoOk":try{await writeCyc(id,t.dataset.m,{pedido_em:hoje()});toast("Pedido de prorrogação registrado")}catch(e){fail(e)}return reload(["cic"]);
@@ -1335,7 +1335,7 @@ async function acao(a,t){
 
 document.addEventListener("click",e=>{
   const tab=e.target.closest(".tab");
-  if(tab){S.tab=tab.dataset.tab;lsSet("rythmos.tab",S.tab);render();window.scrollTo(0,0);return}
+  if(tab){S.tab=tab.dataset.tab;lsSet("vincla.tab",S.tab);render();window.scrollTo(0,0);return}
   const t=e.target.closest("[data-act]");if(!t)return;
   if(t.dataset.act.startsWith("jg")&&typeof jgAcao==="function"&&jgAcao(t.dataset.act,t))return;
   if(/^(pr[A-Z]|abrirPront)/.test(t.dataset.act)&&typeof prAcao==="function"&&prAcao(t.dataset.act,t))return;
@@ -1345,7 +1345,7 @@ document.addEventListener("click",e=>{
   acao(t.dataset.act,t);
 });
 document.addEventListener("change",e=>{
-  if(e.target.dataset.change==="prof"){S.prof=e.target.value;lsSet("rythmos.prof",S.prof);render()}
+  if(e.target.dataset.change==="prof"){S.prof=e.target.value;lsSet("vincla.prof",S.prof);render()}
 });
 document.addEventListener("input",e=>{
   if(e.target.id==="busca"){S.busca=e.target.value;const pos=e.target.selectionStart;render();const b=$("busca");if(b){b.focus();b.setSelectionRange(pos,pos)}}

@@ -1,5 +1,5 @@
-/* Rythmos — segurança e operação: auditoria (quem viu/alterou), assinatura da clínica
-   (teste/ativa/atrasada/bloqueada), administração do Rythmos, verificação em duas etapas
+/* Vincla — segurança e operação: auditoria (quem viu/alterou), assinatura da clínica
+   (teste/ativa/atrasada/bloqueada), administração do Vincla, verificação em duas etapas
    (TOTP) e exportação completa dos dados da clínica. */
 "use strict";
 
@@ -17,14 +17,14 @@ function assinatura(){ return (S.me&&S.me.assinatura)||null; }
 function diasAte(d){ return d?Math.ceil((parse(d)-parse(hoje()))/86400000):null; }
 function bannerAssinatura(){
   const a=assinatura(); if(!a||!isDona()) return "";
-  if(a.status==="teste"){ const n=diasAte(a.teste_ate); if(n==null) return ""; return `<div class="phase ${n<=7?"warn":""}"><span>Período de teste do Rythmos: ${n>0?`faltam ${n} ${n===1?"dia":"dias"}`:"terminou"}. Para continuar, fale com a gente.</span></div>`; }
-  if(a.status==="atrasada") return `<div class="phase warn"><span>A mensalidade do Rythmos está em atraso. O app continua funcionando por enquanto; regularize para não interromper a equipe.</span></div>`;
+  if(a.status==="teste"){ const n=diasAte(a.teste_ate); if(n==null) return ""; return `<div class="phase ${n<=7?"warn":""}"><span>Período de teste do Vincla: ${n>0?`faltam ${n} ${n===1?"dia":"dias"}`:"terminou"}. Para continuar, fale com a gente.</span></div>`; }
+  if(a.status==="atrasada") return `<div class="phase warn"><span>A mensalidade do Vincla está em atraso. O app continua funcionando por enquanto; regularize para não interromper a equipe.</span></div>`;
   return "";
 }
 function assinaturaBloqueada(){ const a=assinatura(); return !!a&&(a.status==="bloqueada"||a.status==="cancelada"); }
 function telaBloqueio(){
   gate(`<div class="card">${gateBrand()}<h2>Assinatura suspensa</h2>
-  <p>O acesso da <b>${esc(S.me.clinica)}</b> ao Rythmos está suspenso. Os dados continuam guardados e ${isDona()?"você pode exportar tudo a qualquer momento.":"a gestora da clínica pode exportá-los."}</p>
+  <p>O acesso da <b>${esc(S.me.clinica)}</b> ao Vincla está suspenso. Os dados continuam guardados e ${isDona()?"você pode exportar tudo a qualquer momento.":"a gestora da clínica pode exportá-los."}</p>
   <div class="toolbar">${isDona()?'<button class="btn primary" id="gExportar">Exportar todos os dados</button>':""}<button class="btn" id="gSair">Sair</button></div>
   <p class="note">Para reativar, fale com a gente pelo WhatsApp ou e-mail que constam na proposta.</p></div>`);
   $("gSair").onclick=sair; const ex=$("gExportar"); if(ex) ex.onclick=async()=>{ ex.disabled=true; ex.textContent="Preparando…"; try{ await loadAll(); await exportarTudo(); }catch(e){ fail(e); } ex.disabled=false; ex.textContent="Exportar todos os dados"; };
@@ -53,15 +53,15 @@ function audCsv(){
 }
 document.addEventListener("input",e=>{ if(e.target.dataset.input==="audFiltro"){ ADM.audFiltro=e.target.value; const box=e.target.closest(".sheet")?e.target.parentElement.nextElementSibling:null; if(box){ const tmp=document.createElement("div"); tmp.innerHTML=audHtml(); box.replaceWith(tmp.querySelector(".hist, p:last-child")); } } });
 
-/* ---------- administração do Rythmos ---------- */
+/* ---------- administração do Vincla ---------- */
 function isAdmin(){ return S.adminSolo===true; }
 async function admCarregar(){ try{ ADM.clinicas=await run(sb.rpc("admin_clinicas")); }catch(e){ fail(e); ADM.clinicas=[]; } }
 function vAdmin(){
-  if(!isAdmin()) return '<div class="empty"><span>Só a administração do Rythmos.</span></div>';
+  if(!isAdmin()) return '<div class="empty"><span>Só a administração do Vincla.</span></div>';
   if(!ADM.clinicas.length&&!ADM.admCarregado){ ADM.admCarregado=true; admCarregar().then(()=>{ if(S.tab==="admin") render(); }); return '<div class="empty"><span>Carregando…</span></div>'; }
   const cs=ADM.clinicas, ativas=cs.filter(c=>c.assinatura&&c.assinatura.status==="ativa").length, teste=cs.filter(c=>!c.assinatura||c.assinatura.status==="teste").length, atras=cs.filter(c=>c.assinatura&&["atrasada","bloqueada"].includes(c.assinatura.status)).length;
   const mrr=cs.reduce((s,c)=>s+(c.assinatura&&c.assinatura.status==="ativa"?Number(c.assinatura.valor||0):0),0);
-  let h=`<div class="toolbar" style="justify-content:space-between"><div><div class="eyebrow">Rythmos · administração</div><span class="note">Todas as clínicas e assinaturas</span></div><button type="button" class="btn" data-act="admAtualizar">Atualizar</button></div>
+  let h=`<div class="toolbar" style="justify-content:space-between"><div><div class="eyebrow">Vincla · administração</div><span class="note">Todas as clínicas e assinaturas</span></div><button type="button" class="btn" data-act="admAtualizar">Atualizar</button></div>
   <div class="stats" style="margin-top:12px"><div class="stat"><b>${cs.length}</b><span>clínicas</span></div><div class="stat hl"><b>${ativas}</b><span>pagantes</span></div><div class="stat"><b>${teste}</b><span>em teste</span></div><div class="stat ${atras?"hl":""}"><b>${atras}</b><span>atrasadas / bloqueadas</span></div></div>
   <div class="stats three" style="margin-top:8px"><div class="stat"><b>${money(mrr)}</b><span>receita mensal (MRR)</span></div><div class="stat"><b>${cs.reduce((s,c)=>s+Number(c.membros||0),0)}</b><span>profissionais ativas</span></div><div class="stat"><b>${cs.reduce((s,c)=>s+Number(c.pacientes||0),0)}</b><span>pacientes</span></div></div>
   <div class="hist" style="margin-top:12px;max-height:none">${cs.map(c=>{const a=c.assinatura||{plano:"teste",status:"teste"};const pill={ativa:"p-ok",teste:"p-confirmada",atrasada:"p-warn",bloqueada:"p-bad",cancelada:"p-mute"}[a.status]||"p-mute";
@@ -85,8 +85,8 @@ function sheetAdmClinica(id){
   $("fAdm").onsubmit=async e=>{ e.preventDefault(); const d=Object.fromEntries(new FormData(e.target));
     try{ await run(sb.rpc("admin_assinatura",{p_clinica:id,p_plano:d.plano,p_status:d.status,p_teste_ate:d.teste_ate||null,p_pago_ate:d.pago_ate||null,p_valor:d.valor?Number(d.valor):null,p_obs:d.obs||null})); toast("Assinatura salva"); closeSheet(); await admCarregar(); render(); }catch(err){ fail(err); } };
 }
-function telaAdminSolo(){ // admin do Rythmos sem clínica própria
-  S.adminSolo=true; S.me={nome:"Administração",papel:"admin",admin:true,clinica:"Rythmos"}; S.clinica={nome:"Administração"};
+function telaAdminSolo(){ // admin do Vincla sem clínica própria
+  S.adminSolo=true; S.me={nome:"Administração",papel:"admin",admin:true,clinica:"Vincla"}; S.clinica={nome:"Administração"};
   $("gate").hidden=true; $("app").hidden=false; S.loaded=true; S.tab="admin"; render();
 }
 
@@ -108,7 +108,7 @@ async function mfaSecao(){
 }
 async function mfaLigar(){
   try{
-    const {data,error}=await sb.auth.mfa.enroll({factorType:"totp",friendlyName:"Rythmos"}); if(error) throw error;
+    const {data,error}=await sb.auth.mfa.enroll({factorType:"totp",friendlyName:"Vincla"}); if(error) throw error;
     openSheet(`<form id="fMfaOn"><header><h2>Ativar verificação em duas etapas</h2><button type="button" class="iconbtn" data-act="close">Cancelar</button></header>
     <p class="note">1. Abra o Google Authenticator (ou similar) e leia o código. 2. Digite os 6 dígitos que aparecerem.</p>
     <div style="text-align:center;margin:10px 0"><img src="${data.totp.qr_code}" alt="QR code" style="width:200px;height:200px;background:#fff;border-radius:12px;padding:8px"></div>
@@ -128,17 +128,17 @@ function csvDe(rows){ if(!rows.length) return ""; const cols=[...new Set(rows.fl
 async function exportarTudo(){
   if(!isDona()) return toast("Só a gestora exporta os dados da clínica.");
   await carregarJSZip();
-  const zip=new JSZip(), pasta=zip.folder("rythmos-"+(S.clinica.nome||"clinica").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\W+/g,"-").toLowerCase());
+  const zip=new JSZip(), pasta=zip.folder("vincla-"+(S.clinica.nome||"clinica").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\W+/g,"-").toLowerCase());
   const tabelas=["pacientes","vinculos","sessoes","evolucoes","pagamentos","unimed_ciclos","prontuarios","metas","metas_notas","documentos","membros","reunioes"];
   const tudo={exportado_em:new Date().toISOString(),clinica:S.clinica};
   for(const t of tabelas){ let rows=[]; try{ rows=await fetchAll(()=>sb.from(t).select("*").order(t==="membros"?"user_id":"id")); }catch(e){ try{ rows=await fetchAll(()=>sb.from(t).select("*")); }catch(e2){ rows=[]; } } tudo[t]=rows; pasta.file(t+".csv",csvDe(rows)); }
   pasta.file("tudo.json",JSON.stringify(tudo,null,2));
-  pasta.file("LEIA-ME.txt",`Exportação completa do Rythmos — ${S.clinica.nome||""}\nGerada em ${new Date().toLocaleString("pt-BR")}\n\nCada arquivo .csv é uma tabela (abre no Excel; separador ponto e vírgula). tudo.json tem os mesmos dados em formato aberto.\nA pasta documentos/ tem os arquivos anexados aos pacientes (laudos, relatórios), quando houver.\nColunas com _id ligam as tabelas: paciente_id → pacientes.id, vinculo_id → vinculos.id, profissional_id → membros.user_id.\n`);
+  pasta.file("LEIA-ME.txt",`Exportação completa do Vincla — ${S.clinica.nome||""}\nGerada em ${new Date().toLocaleString("pt-BR")}\n\nCada arquivo .csv é uma tabela (abre no Excel; separador ponto e vírgula). tudo.json tem os mesmos dados em formato aberto.\nA pasta documentos/ tem os arquivos anexados aos pacientes (laudos, relatórios), quando houver.\nColunas com _id ligam as tabelas: paciente_id → pacientes.id, vinculo_id → vinculos.id, profissional_id → membros.user_id.\n`);
   // documentos (arquivos), melhor esforço, até 200 MB
   let total=0, docs=tudo.documentos||[]; const pd=zip.folder(pasta.name? pasta.name:"docs");
   for(const d of docs){ if(total>200*1024*1024) break; try{ const {data,error}=await sb.storage.from("documentos").createSignedUrl(d.caminho,120); if(error) continue; const r=await fetch(data.signedUrl); if(!r.ok) continue; const b=await r.blob(); total+=b.size; const p=pacById(d.paciente_id); pasta.folder("documentos").file(`${(p?p.nome:"paciente").replace(/[\\/:*?"<>|]+/g,"-")}/${d.nome}`,b); }catch(e){} }
   const blob=await zip.generateAsync({type:"blob"});
-  baixar(blob,`rythmos-exportacao-${hoje()}.zip`);
+  baixar(blob,`vincla-exportacao-${hoje()}.zip`);
   toast("Exportação pronta"); auditar("exportar","clinica",null,null,{tabelas:tabelas.length,documentos:docs.length});
 }
 

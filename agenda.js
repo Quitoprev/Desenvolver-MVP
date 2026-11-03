@@ -1,8 +1,8 @@
-/* Rythmos — Agenda inteligente: dia, semana e mês, cores por especialidade,
+/* Vincla — Agenda inteligente: dia, semana e mês, cores por especialidade,
    números operacionais do período e ocupação por profissional. */
 "use strict";
 
-const AG = { vista:(()=>{try{return localStorage.getItem("rythmos.agVista")||"dia"}catch(e){return "dia"}})() };
+const AG = { vista:(()=>{try{return localStorage.getItem("vincla.agVista")||"dia"}catch(e){return "dia"}})() };
 const TERAPIA_CORES = [
   [/fono/i,"#D98B7A"],[/ocupacional|TO/i,"#C9961E"],[/psicolog/i,"#5E9A85"],[/psicopedag/i,"#B07AA0"],
   [/musico/i,"#C97B5B"],[/fisio/i,"#5E8FA3"],[/nutri/i,"#8E9B4A"],[/aba/i,"#7A2E5B"]
@@ -96,11 +96,11 @@ function agCsv(ini,fim){
 
 function agAcao(a,t){
   if(a==="agCsv"){ agCsv(t.dataset.ini,t.dataset.fim); return true; }
-  if(a==="agVista"){ AG.vista=t.dataset.v; try{localStorage.setItem("rythmos.agVista",AG.vista)}catch(e){} render(); return true; }
+  if(a==="agVista"){ AG.vista=t.dataset.v; try{localStorage.setItem("vincla.agVista",AG.vista)}catch(e){} render(); return true; }
   if(a==="agSem"){ S.dia=addDays(S.dia,7*Number(t.dataset.n)); render(); return true; }
   if(a==="agSemHoje"||a==="agMesHoje"){ S.dia=hoje(); render(); return true; }
   if(a==="agMes"){ const ym=addMonths(ymOf(S.dia),Number(t.dataset.n)); S.dia=ym===ymOf(hoje())?hoje():ym+"-01"; render(); return true; }
-  if(a==="agDia"){ S.dia=t.dataset.d; AG.vista="dia"; try{localStorage.setItem("rythmos.agVista","dia")}catch(e){} render(); window.scrollTo(0,0); return true; }
-  if(a==="agProf"){ S.prof=t.dataset.id||""; lsSet("rythmos.prof",S.prof); render(); return true; }
+  if(a==="agDia"){ S.dia=t.dataset.d; AG.vista="dia"; try{localStorage.setItem("vincla.agVista","dia")}catch(e){} render(); window.scrollTo(0,0); return true; }
+  if(a==="agProf"){ S.prof=t.dataset.id||""; lsSet("vincla.prof",S.prof); render(); return true; }
   return false;
 }

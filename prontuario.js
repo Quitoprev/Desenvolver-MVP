@@ -1,4 +1,4 @@
-/* Rythmos — Prontuário do paciente: anamnese, avaliação, habilidades, objetivos,
+/* Vincla — Prontuário do paciente: anamnese, avaliação, habilidades, objetivos,
    documentos anexados e relatório em Word. Só dona e a profissional da terapia. */
 "use strict";
 
@@ -278,7 +278,7 @@ async function prGerarDocx(f, v){
   kids.push(new D.Paragraph({children:[new D.TextRun({text:(clin.nome?clin.nome+", ":"")+fmtDia(hoje(),{day:"numeric",month:"long",year:"numeric"}),font:"Arial",size:22})],spacing:{before:480}}));
   kids.push(new D.Paragraph({children:[new D.TextRun({text:"_______________________________________",font:"Arial",size:22})],spacing:{before:480}}));
   kids.push(P((m.nome||"")+(m.registro?" · "+m.registro:"")));
-  kids.push(new D.Paragraph({children:[new D.TextRun({text:"Documento gerado pelo Rythmos. Confidencial: contém dados de saúde.",font:"Arial",size:16,color:"6B5560"})],spacing:{before:480}}));
+  kids.push(new D.Paragraph({children:[new D.TextRun({text:"Documento gerado pelo Vincla. Confidencial: contém dados de saúde.",font:"Arial",size:16,color:"6B5560"})],spacing:{before:480}}));
   const doc=new D.Document({sections:[{properties:{page:{margin:{top:1134,bottom:1134,left:1134,right:1134}}},children:kids}]});
   const blob=await D.Packer.toBlob(doc);
   const nome=`${(titulos[f.tipo]||"Relatorio").split(" ")[0]}-${p.nome.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\W+/g,"-").replace(/^-|-$/g,"")}-${fim}.docx`;

@@ -1,4 +1,4 @@
--- Rythmos — ZERAR o banco (apaga TODOS os dados do app). Depois, rode o schema.sql.
+-- Vincla — ZERAR o banco (apaga TODOS os dados do app). Depois, rode o schema.sql.
 -- As contas de login (auth.users) continuam; a clínica e a equipe são criadas de novo no app.
 begin;
 

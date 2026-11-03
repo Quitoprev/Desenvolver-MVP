@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Rythmos</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><rect width='120' height='120' rx='28' fill='%237A2E5B'/><g transform='translate(14 24) scale(1.55)'><path d='M5 29 C12 29 13 20 20 20 C27 20 28 27 35 25 C41 23 42 14 46 12' fill='none' stroke='white' stroke-width='5' stroke-linecap='round'/><circle cx='53' cy='10' r='6' fill='%23E3B23C'/></g></svg>">
+<title>Vincla</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><rect width='120' height='120' rx='28' fill='%237A2E5B'/><g fill='none' stroke-width='8'><circle cx='60' cy='44' r='24' stroke='%23E8A598'/><circle cx='45' cy='70' r='24' stroke='%23E3B23C'/><circle cx='75' cy='70' r='24' stroke='%238FB9A8'/></g><circle cx='60' cy='62' r='5' fill='white'/></svg>">
 <meta name="theme-color" content="#7A2E5B">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Rythmos">
+<meta name="apple-mobile-web-app-title" content="Vincla">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -24,8 +24,8 @@
   <header class="top">
     <div class="wrap">
       <div class="brand">
-        <svg class="mark" viewBox="0 0 60 40" aria-hidden="true"><path class="mk-line" d="M5 29 C12 29 13 20 20 20 C27 20 28 27 35 25 C41 23 42 14 46 12" fill="none" stroke-width="5" stroke-linecap="round"/><circle class="mk-dot" cx="53" cy="10" r="6"/></svg>
-        <span class="word">rythmos</span>
+        <svg class="mark" viewBox="0 0 120 120" aria-hidden="true"><circle class="mk-a" cx="60" cy="44" r="26"/><circle class="mk-b" cx="44" cy="72" r="26"/><circle class="mk-c" cx="76" cy="72" r="26"/><circle class="mk-dot" cx="60" cy="63" r="5"/></svg>
+        <span class="word">vincla</span>
         <img id="clinicLogo" class="clogo" alt="" hidden><span class="clinic" id="clinicName"></span>
         <button class="iconbtn" id="btnClinica" type="button" hidden>Clínica</button>
         <button class="iconbtn" id="btnConta" type="button">Conta</button>
@@ -34,7 +34,7 @@
     </div>
   </header>
   <main><div class="wrap" id="view"></div></main>
-  <footer class="rodape"><div class="wrap"><svg class="mark" viewBox="0 0 60 40" aria-hidden="true"><path class="mk-line" d="M5 29 C12 29 13 20 20 20 C27 20 28 27 35 25 C41 23 42 14 46 12" fill="none" stroke-width="5" stroke-linecap="round"/><circle class="mk-dot" cx="53" cy="10" r="6"/></svg><span>feito com <b>rythmos</b></span></div></footer>
+  <footer class="rodape"><div class="wrap"><svg class="mark" viewBox="0 0 120 120" aria-hidden="true"><circle class="mk-a" cx="60" cy="44" r="26"/><circle class="mk-b" cx="44" cy="72" r="26"/><circle class="mk-c" cx="76" cy="72" r="26"/><circle class="mk-dot" cx="60" cy="63" r="5"/></svg><span>feito com <b>vincla</b></span></div></footer>
   <button class="fab" id="fab" type="button" hidden></button>
 </div>
 
@@ -43,7 +43,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
-<script>if(/^admin\./i.test(location.hostname))window.RYTHMOS_MODO="admin";</script>
+<script>if(/^admin\./i.test(location.hostname))window.VINCLA_MODO="admin";</script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 <script src="jogos.js"></script>
@@ -52,20 +52,20 @@
 <script src="agenda.js"></script>
 <script src="admin.js"></script>
 <script>
-if("serviceWorker" in navigator&&location.protocol==="https:"&&window.RYTHMOS_MODO!=="admin")navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator&&location.protocol==="https:"&&window.VINCLA_MODO!=="admin")navigator.serviceWorker.register("sw.js").catch(()=>{});
 // aviso de instalação: Android/Chrome mostra o botão; iPhone recebe a dica do Safari
 (function(){
-  const jaApp=matchMedia("(display-mode: standalone)").matches||navigator.standalone||window.RYTHMOS_MODO==="admin";
-  let ok=false;try{ok=!localStorage.getItem("rythmos.instalar.nao")}catch(e){}
+  const jaApp=matchMedia("(display-mode: standalone)").matches||navigator.standalone||window.VINCLA_MODO==="admin";
+  let ok=false;try{ok=!localStorage.getItem("vincla.instalar.nao")}catch(e){}
   if(jaApp||!ok)return;
   const iOS=/iPhone|iPad|iPod/.test(navigator.userAgent)&&!window.MSStream;
   const box=document.createElement("div");box.className="instalar";box.hidden=true;
   const mostrar=(msg,btn)=>{box.innerHTML=`<span>${msg}</span><span class="r">${btn?'<button type="button" class="btn primary" id="instOk">Instalar</button>':""}<button type="button" class="btn" id="instNao">Agora não</button></span>`;document.body.appendChild(box);box.hidden=false;
-    document.getElementById("instNao").onclick=()=>{box.remove();try{localStorage.setItem("rythmos.instalar.nao","1")}catch(e){}}};
+    document.getElementById("instNao").onclick=()=>{box.remove();try{localStorage.setItem("vincla.instalar.nao","1")}catch(e){}}};
   let evt=null;
-  window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();evt=e;mostrar("Instale o Rythmos como app no celular: abre em tela cheia, com ícone na tela inicial.",true);
+  window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();evt=e;mostrar("Instale o Vincla como app no celular: abre em tela cheia, com ícone na tela inicial.",true);
     document.getElementById("instOk").onclick=async()=>{box.remove();if(evt){evt.prompt();await evt.userChoice;evt=null}}});
-  if(iOS)setTimeout(()=>mostrar("Para ter o Rythmos como app no iPhone: toque em Compartilhar (quadrado com seta) e depois em “Adicionar à Tela de Início”.",false),2500);
+  if(iOS)setTimeout(()=>mostrar("Para ter o Vincla como app no iPhone: toque em Compartilhar (quadrado com seta) e depois em “Adicionar à Tela de Início”.",false),2500);
 })();
 </script>
 </body>

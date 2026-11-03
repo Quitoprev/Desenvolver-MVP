@@ -267,7 +267,7 @@ alter table public.metas add column if not exists ativa boolean not null default
 create index if not exists metas_vinculo_idx on public.metas(vinculo_id);
 create index if not exists metas_notas_paciente_idx on public.metas_notas(paciente_id, data);
 
--- ---------- auditoria, assinaturas e administração do Rythmos ----------
+-- ---------- auditoria, assinaturas e administração do Vincla ----------
 -- Quem viu/alterou o quê. Preenchida por triggers (alterações) e pela função registrar_acesso (leituras de prontuário).
 create table if not exists public.auditoria (
   id bigint generated always as identity primary key,
@@ -282,7 +282,7 @@ create table if not exists public.auditoria (
 );
 create index if not exists auditoria_clinica_idx on public.auditoria(clinica_id, criado_em desc);
 create index if not exists auditoria_paciente_idx on public.auditoria(paciente_id, criado_em desc);
--- Assinatura de cada clínica (cobrança). Só a administração do Rythmos altera.
+-- Assinatura de cada clínica (cobrança). Só a administração do Vincla altera.
 create table if not exists public.assinaturas (
   clinica_id uuid primary key references public.clinicas(id) on delete cascade,
   plano text not null default 'teste',             -- teste | consultorio | clinica | rede
@@ -293,7 +293,7 @@ create table if not exists public.assinaturas (
   obs text,
   atualizado_em timestamptz not null default now()
 );
--- Pessoas do Rythmos (administração): veem todas as clínicas e mexem nas assinaturas.
+-- Pessoas do Vincla (administração): veem todas as clínicas e mexem nas assinaturas.
 create table if not exists public.admins (
   user_id uuid primary key references auth.users(id) on delete cascade,
   nome text,
@@ -332,7 +332,7 @@ language sql stable security definer set search_path = public as $$
   select coalesce(public.meu_papel() in ('dona','recepcao'), false)
 $$;
 
--- administração do Rythmos (tabela admins)
+-- administração do Vincla (tabela admins)
 create or replace function public.eh_admin() returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from admins where user_id = auth.uid())
@@ -774,7 +774,7 @@ language sql stable security definer set search_path = public as $$
   from membros m join clinicas c on c.id = m.clinica_id
   where m.user_id = auth.uid()
 $$;
--- quem é admin do Rythmos mas não é membro de clínica também precisa entrar
+-- quem é admin do Vincla mas não é membro de clínica também precisa entrar
 create or replace function public.sou_admin() returns boolean
 language sql stable security definer set search_path = public as $$ select public.eh_admin() $$;
 
@@ -811,7 +811,7 @@ do $$ declare t text; begin
   end loop;
 end $$;
 
--- administração do Rythmos: lista de clínicas com números e assinatura
+-- administração do Vincla: lista de clínicas com números e assinatura
 create or replace function public.admin_clinicas() returns json
 language sql stable security definer set search_path = public as $$
   select coalesce(json_agg(json_build_object(
@@ -828,7 +828,7 @@ $$;
 create or replace function public.admin_assinatura(p_clinica uuid, p_plano text, p_status text, p_teste_ate date, p_pago_ate date, p_valor numeric, p_obs text) returns void
 language plpgsql security definer set search_path = public as $$
 begin
-  if not public.eh_admin() then raise exception 'Só a administração do Rythmos'; end if;
+  if not public.eh_admin() then raise exception 'Só a administração do Vincla'; end if;
   insert into assinaturas(clinica_id, plano, status, teste_ate, pago_ate, valor, obs)
     values (p_clinica, p_plano, p_status, p_teste_ate, p_pago_ate, p_valor, p_obs)
   on conflict (clinica_id) do update set plano = excluded.plano, status = excluded.status, teste_ate = excluded.teste_ate,
