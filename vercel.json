@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/", "has": [{ "type": "host", "value": "admin.rythmosapp.com.br" }], "destination": "/admin.html" },
-    { "source": "/index.html", "has": [{ "type": "host", "value": "admin.rythmosapp.com.br" }], "destination": "/admin.html" }
+    { "source": "/", "has": [{ "type": "host", "value": "admin.vincla.app.br" }], "destination": "/admin.html" },
+    { "source": "/index.html", "has": [{ "type": "host", "value": "admin.vincla.app.br" }], "destination": "/admin.html" }
   ],
   "headers": [
     { "source": "/(.*)", "headers": [

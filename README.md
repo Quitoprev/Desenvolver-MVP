@@ -40,7 +40,7 @@ Essas regras ficam no banco de dados (Supabase), não só na tela. Mesmo alguém
    Nunca cole ali a chave `service_role` ou `secret`.
 
 ### 3. Vercel (endereço do app)
-Domínios do Vincla (projeto do app → Settings → Domains): `app.rythmosapp.com.br` e `admin.rythmosapp.com.br`. O `vercel.json` faz o `admin.` abrir a administração (`admin.html`) e o `app.` abrir o app da clínica. Na Hostinger (zona DNS): `A @ → 76.76.21.21`, `CNAME www → cname.vercel-dns.com`, `CNAME app → cname.vercel-dns.com`, `CNAME admin → cname.vercel-dns.com`. O site de vendas fica no projeto `vincla-site`, com `rythmosapp.com.br` e `www`.
+Domínios do Vincla (projeto do app → Settings → Domains): `app.vincla.app.br` e `admin.vincla.app.br`. O `vercel.json` faz o `admin.` abrir a administração (`admin.html`) e o `app.` abrir o app da clínica. Na Hostinger (zona DNS): `A @ → 76.76.21.21`, `CNAME www → cname.vercel-dns.com`, `CNAME app → cname.vercel-dns.com`, `CNAME admin → cname.vercel-dns.com`. O site de vendas fica no projeto `vincla-site`, com `vincla.app.br` e `www`.
 1. Em [vercel.com](https://vercel.com), entre com a mesma conta do GitHub. Clique em **Add New** → **Project** e importe o repositório.
 2. Em **Framework Preset**, escolha **Other** e clique em **Deploy**. Não precisa configurar mais nada.
 3. Copie o endereço que a Vercel criar (algo como `sessio-xxxx.vercel.app`).
@@ -235,7 +235,7 @@ Arquivos envolvidos: `manifest.json` (nome, cores e ícones), `sw.js` (cache da 
 
 ## Arquivos
 
-- `vercel.json`: liga `admin.rythmosapp.com.br` à página de administração e põe cabeçalhos de segurança.
+- `vercel.json`: liga `admin.vincla.app.br` à página de administração e põe cabeçalhos de segurança.
 - `admin.html`: a página da administração do Vincla (mesmo código, modo admin).
 - `index.html`, `styles.css`, `app.js`, `jogos.js`, `prontuario.js`, `painel.js`, `agenda.js`, `admin.js`: o app. Roda direto no navegador, sem etapa de build.
 - `config.js`: endereço e chave pública do Supabase.

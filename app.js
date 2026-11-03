@@ -58,6 +58,8 @@ function errMsg(e){
   if(/Email not confirmed/i.test(m))return"Confirme seu e-mail pelo link que enviamos antes de entrar.";
   if(/User already registered/i.test(m))return"Já existe uma conta com esse e-mail. Use Entrar.";
   if(/Password should be at least/i.test(m))return"A senha precisa ter pelo menos 6 caracteres.";
+  if(/same_password|different from the old password/i.test(m))return"A senha nova precisa ser diferente da atual.";
+  if(/reauthentication|nonce/i.test(m))return"Por segurança, saia e entre de novo antes de trocar a senha.";
   if(/Failed to fetch|NetworkError/i.test(m))return"Sem conexão com o servidor. Confira a internet e tente de novo.";
   return m||"Algo deu errado. Tente de novo.";
 }
@@ -973,6 +975,12 @@ function profSelect(id,name,sel,obrig){
 }
 
 /* --- paciente --- */
+// Particular: pede valor da sessão. Convênio (Unimed/Outro): o valor vem do convênio; pede só a data do atendimento inicial.
+function convCampos(form){
+  const conv=(form.querySelector("[name=convenio]")||{}).value||"Particular",part=conv==="Particular";
+  form.querySelectorAll("[data-conv=particular]").forEach(el=>{el.hidden=!part;if(!part)el.querySelector("input").value=""});
+  form.querySelectorAll("[data-conv=convenio]").forEach(el=>{el.hidden=part;if(part)el.querySelector("input").value=""});
+}
 async function sheetPaciente(p,opt){
   opt=opt||{};const novo=!p;p=p||{convenio:"Particular"};
   const vs=novo?[]:S.vin.filter(v=>v.paciente_id===p.id);
@@ -996,8 +1004,8 @@ async function sheetPaciente(p,opt){
     <div class="f"><label for="v_ter">Terapia</label><input id="v_ter" name="v_terapia" list="dlTer" required value="${esc(isProf()?(membro(meuId())||{}).especialidade||"":"")}"></div>
     <div class="f"><label for="v_prof">Profissional</label>${profSelect("v_prof","v_prof","",false)}</div>
     <div class="f"><label for="v_sit">Situação</label><select id="v_sit" name="v_situacao"><option value="ativo" ${opt.fila?"":"selected"}>Em atendimento</option><option value="fila" ${opt.fila?"selected":""}>Fila de espera</option></select></div>
-    <div class="f"><label for="v_valor">Valor da sessão (R$)</label><input id="v_valor" name="v_valor" type="number" min="0" step="0.01" inputmode="decimal"></div>
-    <div class="f"><label for="v_ini">Atendimento inicial pelo convênio</label><input id="v_ini" name="v_inicio" type="date"></div>
+    <div class="f" data-conv="particular"><label for="v_valor">Valor da sessão (R$)</label><input id="v_valor" name="v_valor" type="number" min="0" step="0.01" inputmode="decimal"></div>
+    <div class="f" data-conv="convenio"><label for="v_ini">Atendimento inicial pelo convênio</label><input id="v_ini" name="v_inicio" type="date"></div>
     <div class="f"><label for="v_pri">Prioridade na fila</label><select id="v_pri" name="v_prioridade"><option value="normal">Normal</option><option value="alta">Alta</option></select></div>`:""}
   </div>
   ${!novo&&typeof podeProntuario==="function"&&podeProntuario(p.id)?`<div class="toolbar"><button type="button" class="btn primary" data-act="abrirPront" data-id="${p.id}">Prontuário · anamnese, avaliação, relatórios</button></div>`:""}
@@ -1007,6 +1015,7 @@ async function sheetPaciente(p,opt){
   ${!novo?'<div id="evoLista"></div>':""}
   <div class="foot">${!novo&&isDona()?`<button type="button" class="btn danger" data-act="delPac" data-id="${p.id}">Excluir paciente</button>`:""}<div class="r">${!novo&&vs.some(v=>v.situacao==="ativo"&&(isEquipe()||v.profissional_id===meuId()))?`<button type="button" class="btn" data-act="novaSesPac" data-id="${p.id}">Agendar sessão</button>`:""}${podeEditar?'<button class="btn primary" type="submit">Salvar</button>':""}</div></div>
   ${datalists()}</form>`);
+  convCampos($("fPac"));$("p_conv").onchange=()=>convCampos($("fPac"));
   $("fPac").onsubmit=async e=>{
     e.preventDefault();const d=Object.fromEntries(new FormData(e.target));for(const k in d)d[k]=String(d[k]).trim();
     const cpfD=String(d.cpf_pagador||"").replace(/\D/g,"");
@@ -1019,7 +1028,7 @@ async function sheetPaciente(p,opt){
         const id=uuid();
         await run(sb.from("pacientes").insert({id,...dados}));
         const prof=d.v_prof||null;
-        await run(sb.from("vinculos").insert({paciente_id:id,profissional_id:prof,terapia:d.v_terapia,situacao:d.v_situacao,prioridade:d.v_prioridade||"normal",valor_sessao:d.v_valor?Number(d.v_valor):null,inicio_convenio:d.v_inicio||null}));
+        await run(sb.from("vinculos").insert({paciente_id:id,profissional_id:prof,terapia:d.v_terapia,situacao:d.v_situacao,prioridade:d.v_prioridade||"normal",valor_sessao:d.convenio==="Particular"&&d.v_valor?Number(d.v_valor):null,inicio_convenio:d.convenio!=="Particular"&&d.v_inicio?d.v_inicio:null}));
         toast(d.v_situacao==="fila"?"Adicionado à fila":"Paciente cadastrado");
       }else{await run(sb.from("pacientes").update(dados).eq("id",p.id));toast("Alterações salvas")}
       closeSheet();reload(["pac","vin"]);
@@ -1046,16 +1055,17 @@ function sheetVinculo(v,pid,opt){
     <div class="f"><label for="t_ter">Terapia</label><input id="t_ter" name="terapia" list="dlTer" required value="${esc(v.terapia||"")}"></div>
     <div class="f"><label for="t_prof">Profissional</label>${profSelect("t_prof","profissional_id",v.profissional_id||"",!!opt.iniciar)}</div>
     <div class="f"><label for="t_sit">Situação</label><select id="t_sit" name="situacao">${Object.keys(SITUACAO).map(k=>`<option value="${k}" ${sit===k?"selected":""}>${SITUACAO[k]}</option>`).join("")}</select></div>
-    <div class="f"><label for="t_valor">Valor da sessão (R$)</label><input id="t_valor" name="valor_sessao" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(v.valor_sessao??"")}"></div>
-    <div class="f"><label for="t_ini">Atendimento inicial pelo convênio</label><input id="t_ini" name="inicio_convenio" type="date" value="${esc(v.inicio_convenio||(opt.iniciar&&p.convenio==="Unimed"?hoje():""))}"></div>
+    ${(p.convenio||"Particular")==="Particular"?`<div class="f"><label for="t_valor">Valor da sessão (R$)</label><input id="t_valor" name="valor_sessao" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(v.valor_sessao??"")}"></div>`:""}
+    ${(p.convenio||"Particular")!=="Particular"?`<div class="f"><label for="t_ini">Atendimento inicial pelo convênio</label><input id="t_ini" name="inicio_convenio" type="date" value="${esc(v.inicio_convenio||(opt.iniciar&&p.convenio==="Unimed"?hoje():""))}"></div>`:""}
     <div class="f"><label for="t_pri">Prioridade na fila</label><select id="t_pri" name="prioridade"><option value="normal">Normal</option><option value="alta" ${v.prioridade==="alta"?"selected":""}>Alta</option></select></div>
     <div class="f"><label for="t_ent">Entrou na fila em</label><input id="t_ent" name="entrada_fila" type="date" value="${esc(v.entrada_fila||"")}"></div>
   </div>
+  ${p.convenio&&p.convenio!=="Particular"?'<p class="note">Paciente de convênio: o valor da sessão vem do convênio, por isso não é informado aqui.</p>':""}
   ${p.convenio==="Unimed"?'<p class="note">Paciente da Unimed: a data do atendimento inicial define a partir de quando o painel da Unimed cobra pedido e guia desta terapia.</p>':""}
   <div class="foot">${podeApagar?`<button type="button" class="btn danger" data-act="delVin" data-id="${v.id}">Remover terapia</button>`:""}<div class="r"><button class="btn primary" type="submit">${opt.iniciar?"Salvar e agendar":"Salvar"}</button></div></div>${datalists()}</form>`);
   $("fVin").onsubmit=async e=>{
     e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
-    const dados={terapia:String(d.terapia).trim(),profissional_id:d.profissional_id||null,situacao:d.situacao,prioridade:d.prioridade,valor_sessao:d.valor_sessao?Number(d.valor_sessao):null,inicio_convenio:d.inicio_convenio||null,entrada_fila:d.entrada_fila||null};
+    const dados={terapia:String(d.terapia).trim(),profissional_id:d.profissional_id||null,situacao:d.situacao,prioridade:d.prioridade,valor_sessao:(p.convenio||"Particular")==="Particular"&&d.valor_sessao?Number(d.valor_sessao):null,inicio_convenio:d.inicio_convenio||null,entrada_fila:d.entrada_fila||null};
     try{
       let id=v.id;
       if(novo){id=uuid();await run(sb.from("vinculos").insert({id,paciente_id:v.paciente_id,...dados}))}
@@ -1235,6 +1245,7 @@ function sheetConta(){
     <div class="f"><label for="k_cpf">CPF</label><input id="k_cpf" name="cpf" inputmode="numeric" value="${esc(cpfFmt((membro(meuId())||{}).cpf))}"></div>
     <div class="f"><label for="k_reg">Registro no conselho</label><input id="k_reg" name="registro" placeholder="CRFa 4-12345" value="${esc((membro(meuId())||{}).registro||"")}"></div></div>
   ${FISCAL_ATIVO?`<p class="note">${(membro(meuId())||{}).recebe==="pf"?"Você recebe as sessões particulares como pessoa física: o recibo sai pelo Receita Saúde, em seu nome.":"As sessões particulares são faturadas pela clínica."}</p>`:""}
+  <div class="f full" style="margin-top:6px"><label>Senha</label><div class="statusgrid" style="margin-top:4px"><button type="button" data-act="trocarSenha">Trocar senha</button></div><span class="note">Troque a senha provisória por uma só sua.</span></div>
   <div id="mfaBox" class="f full" style="margin-top:6px"></div>
   <div class="f full" style="margin-top:6px"><label>Aparência</label><div class="statusgrid" style="margin-top:4px">${[["auto","Automático"],["light","Claro"],["dark","Escuro"]].map(([k,l])=>`<button type="button" data-act="tema" data-v="${k}" aria-pressed="${temaAtual()===k}">${l}</button>`).join("")}</div><span class="note">Automático segue o tema do aparelho.</span></div>
   <div class="foot"><button type="button" class="btn danger" data-act="sair">Sair</button><div class="r"><button type="button" class="btn" data-act="atualizar">Atualizar dados</button><button class="btn primary" type="submit">Salvar</button></div></div></form>`);
@@ -1243,6 +1254,23 @@ function sheetConta(){
     try{await run(sb.from("membros").update({nome:d.nome,cpf:cpfD||null,registro:d.registro||null}).eq("user_id",meuId()));S.me.nome=d.nome;await reload(["membros"]);closeSheet();toast("Conta atualizada")}catch(err){fail(err)}};
 }
 
+function sheetSenha(){
+  openSheet(`<form id="fTrocaSenha"><header><h2>Trocar senha</h2><button type="button" class="iconbtn" data-act="close">Fechar</button></header>
+  <div class="fields">
+    <div class="f full"><label for="s_nova">Senha nova</label><input id="s_nova" name="nova" type="password" minlength="8" autocomplete="new-password" required></div>
+    <div class="f full"><label for="s_conf">Repita a senha nova</label><input id="s_conf" name="conf" type="password" minlength="8" autocomplete="new-password" required></div>
+  </div>
+  <p class="note">Pelo menos 8 caracteres. Use uma senha que você não usa em outro lugar.</p>
+  <div class="foot"><div class="r"><button class="btn primary" type="submit">Salvar senha</button></div></div></form>`);
+  $("fTrocaSenha").onsubmit=async e=>{
+    e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
+    if(d.nova!==d.conf)return toast("As duas senhas não são iguais");
+    if(d.nova.length<8)return toast("A senha precisa ter pelo menos 8 caracteres");
+    const btn=e.target.querySelector("[type=submit]");btn.disabled=true;
+    try{await run(sb.auth.updateUser({password:d.nova}));if(typeof auditar==="function")auditar("senha_trocada");closeSheet();toast("Senha alterada")}
+    catch(err){btn.disabled=false;fail(err)}
+  };
+}
 function temaAtual(){try{return localStorage.getItem("vincla.tema")||localStorage.getItem("rythmos.tema")||"auto"}catch(e){return "auto"}}
 function aplicarTema(v){ if(v==="light"||v==="dark") document.documentElement.setAttribute("data-theme",v); else document.documentElement.removeAttribute("data-theme");
   const mt=document.querySelector('meta[name="theme-color"]'); if(mt) mt.content=v==="dark"||(v!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches)?"#1C0E18":"#7A2E5B"; }
@@ -1286,6 +1314,7 @@ async function acao(a,t){
     case"pickSt":document.querySelectorAll("[data-act=pickSt]").forEach(b=>b.setAttribute("aria-pressed",b===t));$("s_st").value=t.dataset.v;return;
     case"st":t.disabled=true;try{await run(sb.from("sessoes").update({status:t.dataset.v}).eq("id",id));const s=S.ses.find(x=>x.id===id);if(s)s.status=t.dataset.v;render();reload(["ses"])}catch(e){t.disabled=false;fail(e)}return;
     case"copy":{const el=$("msgtxt");try{await navigator.clipboard.writeText(el.textContent);toast("Mensagem copiada")}catch{const r=document.createRange();r.selectNodeContents(el);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Texto selecionado: copie pelo menu")}return}
+    case"trocarSenha":return sheetSenha();
     case"copyCode":try{await navigator.clipboard.writeText(S.clinica.codigo_convite);toast("Código copiado")}catch{toast("Código: "+S.clinica.codigo_convite)}return;
     case"novoCodigo":return confirmInline(t,"Toque de novo para trocar",async()=>{try{await run(sb.rpc("novo_codigo"));await reload(["clinica"]);sheetClinica("equipe");toast("Código trocado. O antigo não funciona mais.")}catch(e){fail(e)}});
     case"delSes":return confirmInline(t,"Toque de novo para excluir",async()=>{try{await run(sb.from("sessoes").delete().eq("id",id));closeSheet();toast("Sessão excluída");reload(["ses","evo","pag"])}catch(e){fail(e)}});
