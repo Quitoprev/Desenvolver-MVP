@@ -969,6 +969,22 @@ function confirmInline(btn,label,fn){
   pendingBtn=btn;btn.textContent=label;setTimeout(()=>{if(pendingBtn===btn){pendingBtn=null;btn.textContent=btn.dataset.orig}},4000);
 }
 function datalists(){return`<datalist id="dlTer">${[...new Set(TERAPIAS.concat(S.vin.map(v=>v.terapia)))].map(t=>`<option value="${esc(t)}">`).join("")}</datalist>`}
+// Ao escolher a terapia, o select de profissional mostra só quem tem essa especialidade (mantém a já selecionada). Sem ninguém da especialidade, mostra todas.
+const normTxt=t=>String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+function profsDaTerapia(terapia){const t=normTxt(terapia);if(!t)return[];return atendentes().filter(m=>{const e=normTxt(m.especialidade);return e&&(e===t||e.startsWith(t)||t.startsWith(e))})}
+function ligarFiltroProf(terInput,selId,noteId){
+  const sel=$(selId),inp=$(terInput);if(!sel||!inp||sel.tagName!=="SELECT")return;
+  const todos=atendentes(),vazio=sel.querySelector("option[value='']"),vazioHtml=vazio?vazio.outerHTML:"",inicial=sel.value;
+  const aplicar=()=>{
+    let atual=sel.value;const lista=profsDaTerapia(inp.value),ids=new Set(lista.map(m=>m.user_id));
+    if(lista.length&&atual&&atual!==inicial&&!ids.has(atual))atual="";
+    const mostrar=lista.length?todos.filter(m=>ids.has(m.user_id)||m.user_id===atual):todos;
+    sel.innerHTML=vazioHtml+mostrar.map(m=>`<option value="${m.user_id}" ${atual===m.user_id?"selected":""}>${esc(m.nome)}${lista.length&&!ids.has(m.user_id)?" (outra especialidade)":""}</option>`).join("");
+    if(mostrar.length===1&&!atual&&lista.length)sel.value=mostrar[0].user_id;
+    const n=$(noteId);if(n)n.textContent=inp.value.trim()?(lista.length?`Mostrando quem atende ${inp.value.trim()}.`:`Ninguém cadastrado em ${inp.value.trim()}; mostrando toda a equipe.`):"";
+  };
+  inp.addEventListener("input",aplicar);inp.addEventListener("change",aplicar);aplicar();
+}
 function profSelect(id,name,sel,obrig){
   if(!isEquipe())return`<input type="hidden" name="${name}" value="${meuId()}"><input id="${id}" value="${esc(S.me.nome)}" disabled>`;
   return`<select id="${id}" name="${name}" ${obrig?"required":""}><option value="">${obrig?"Escolha…":"Sem profissional definida"}</option>${atendentes().map(m=>`<option value="${m.user_id}" ${sel===m.user_id?"selected":""}>${esc(m.nome)}</option>`).join("")}</select>`;
@@ -1002,7 +1018,7 @@ async function sheetPaciente(p,opt){
     <div class="f full"><label for="p_obs">Observações</label><textarea id="p_obs" name="observacoes">${esc(p.observacoes)}</textarea></div>
     ${novo?`<div class="f full"><div class="eyebrow">Primeira terapia</div></div>
     <div class="f"><label for="v_ter">Terapia</label><input id="v_ter" name="v_terapia" list="dlTer" required value="${esc(isProf()?(membro(meuId())||{}).especialidade||"":"")}"></div>
-    <div class="f"><label for="v_prof">Profissional</label>${profSelect("v_prof","v_prof","",false)}</div>
+    <div class="f"><label for="v_prof">Profissional</label>${profSelect("v_prof","v_prof","",false)}<span class="note" id="v_profNote"></span></div>
     <div class="f"><label for="v_sit">Situação</label><select id="v_sit" name="v_situacao"><option value="ativo" ${opt.fila?"":"selected"}>Em atendimento</option><option value="fila" ${opt.fila?"selected":""}>Fila de espera</option></select></div>
     <div class="f" data-conv="particular"><label for="v_valor">Valor da sessão (R$)</label><input id="v_valor" name="v_valor" type="number" min="0" step="0.01" inputmode="decimal"></div>
     <div class="f" data-conv="convenio"><label for="v_ini">Atendimento inicial pelo convênio</label><input id="v_ini" name="v_inicio" type="date"></div>
@@ -1015,7 +1031,7 @@ async function sheetPaciente(p,opt){
   ${!novo?'<div id="evoLista"></div>':""}
   <div class="foot">${!novo&&isDona()?`<button type="button" class="btn danger" data-act="delPac" data-id="${p.id}">Excluir paciente</button>`:""}<div class="r">${!novo&&vs.some(v=>v.situacao==="ativo"&&(isEquipe()||v.profissional_id===meuId()))?`<button type="button" class="btn" data-act="novaSesPac" data-id="${p.id}">Agendar sessão</button>`:""}${podeEditar?'<button class="btn primary" type="submit">Salvar</button>':""}</div></div>
   ${datalists()}</form>`);
-  convCampos($("fPac"));$("p_conv").onchange=()=>convCampos($("fPac"));
+  convCampos($("fPac"));$("p_conv").onchange=()=>convCampos($("fPac"));if(novo)ligarFiltroProf("v_ter","v_prof","v_profNote");
   $("fPac").onsubmit=async e=>{
     e.preventDefault();const d=Object.fromEntries(new FormData(e.target));for(const k in d)d[k]=String(d[k]).trim();
     const cpfD=String(d.cpf_pagador||"").replace(/\D/g,"");
@@ -1053,7 +1069,7 @@ function sheetVinculo(v,pid,opt){
   openSheet(`<form id="fVin"><header><div style="min-width:0"><div class="eyebrow">${esc(p.nome||"")}</div><h2>${opt.iniciar?"Iniciar atendimento":novo?"Nova terapia":esc(v.terapia)}</h2></div><button type="button" class="iconbtn" data-act="close">Fechar</button></header>
   <div class="fields">
     <div class="f"><label for="t_ter">Terapia</label><input id="t_ter" name="terapia" list="dlTer" required value="${esc(v.terapia||"")}"></div>
-    <div class="f"><label for="t_prof">Profissional</label>${profSelect("t_prof","profissional_id",v.profissional_id||"",!!opt.iniciar)}</div>
+    <div class="f"><label for="t_prof">Profissional</label>${profSelect("t_prof","profissional_id",v.profissional_id||"",!!opt.iniciar)}<span class="note" id="t_profNote"></span></div>
     <div class="f"><label for="t_sit">Situação</label><select id="t_sit" name="situacao">${Object.keys(SITUACAO).map(k=>`<option value="${k}" ${sit===k?"selected":""}>${SITUACAO[k]}</option>`).join("")}</select></div>
     ${(p.convenio||"Particular")==="Particular"?`<div class="f"><label for="t_valor">Valor da sessão (R$)</label><input id="t_valor" name="valor_sessao" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(v.valor_sessao??"")}"></div>`:""}
     ${(p.convenio||"Particular")!=="Particular"?`<div class="f"><label for="t_ini">Atendimento inicial pelo convênio</label><input id="t_ini" name="inicio_convenio" type="date" value="${esc(v.inicio_convenio||(opt.iniciar&&p.convenio==="Unimed"?hoje():""))}"></div>`:""}
@@ -1063,6 +1079,7 @@ function sheetVinculo(v,pid,opt){
   ${p.convenio&&p.convenio!=="Particular"?'<p class="note">Paciente de convênio: o valor da sessão vem do convênio, por isso não é informado aqui.</p>':""}
   ${p.convenio==="Unimed"?'<p class="note">Paciente da Unimed: a data do atendimento inicial define a partir de quando o painel da Unimed cobra pedido e guia desta terapia.</p>':""}
   <div class="foot">${podeApagar?`<button type="button" class="btn danger" data-act="delVin" data-id="${v.id}">Remover terapia</button>`:""}<div class="r"><button class="btn primary" type="submit">${opt.iniciar?"Salvar e agendar":"Salvar"}</button></div></div>${datalists()}</form>`);
+  ligarFiltroProf("t_ter","t_prof","t_profNote");
   $("fVin").onsubmit=async e=>{
     e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
     const dados={terapia:String(d.terapia).trim(),profissional_id:d.profissional_id||null,situacao:d.situacao,prioridade:d.prioridade,valor_sessao:(p.convenio||"Particular")==="Particular"&&d.valor_sessao?Number(d.valor_sessao):null,inicio_convenio:d.inicio_convenio||null,entrada_fila:d.entrada_fila||null};
